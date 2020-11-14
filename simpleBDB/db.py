@@ -1,16 +1,10 @@
 import pickle
-import re
 import os
 import atexit
 # third party module not by me:
 import bsddb3
 
 # For more info on bsddb3 see here: http://pybsddb.sourceforge.net/bsddb3.html
-
-DB_HOME = os.path.join("db")
-if not os.path.exists(DB_HOME):
-    os.makedirs(DB_HOME)
-
 
 # Setup Berkeley DB Env
 # More info n the flags can be found here: https://docs.oracle.com/cd/E17276_01/html/api_reference/C/envopen.html
@@ -192,17 +186,24 @@ def from_string(a):
     return pickle.loads(a)
 
 
+envOpened = False
+
+
 def createEnvWithDir(envPath):
     """creates the DBEnv using envPath, Must be called before using the DB
 
     envPath: The directory where the db will be stored"""
-    if not os.path.exists(envPath):
-        os.makedirs(envPath)
-    env.open(
-        envPath,
-        bsddb3.db.DB_INIT_MPOOL |
-        bsddb3.db.DB_THREAD |
-        bsddb3.db.DB_INIT_LOCK |
-        bsddb3.db.DB_INIT_TXN |
-        bsddb3.db.DB_INIT_LOG |
-        bsddb3.db.DB_CREATE)
+    global envOpened
+
+    if not envOpened:
+        if not os.path.exists(envPath):
+            os.makedirs(envPath)
+        env.open(
+            envPath,
+            bsddb3.db.DB_INIT_MPOOL |
+            bsddb3.db.DB_THREAD |
+            bsddb3.db.DB_INIT_LOCK |
+            bsddb3.db.DB_INIT_TXN |
+            bsddb3.db.DB_INIT_LOG |
+            bsddb3.db.DB_CREATE)
+        envOpened = True
