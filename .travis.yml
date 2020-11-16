@@ -4,8 +4,8 @@ python:
 - 3.7
 - 3.8
 before_install:
-- sudo apt update
-- sudo apt install libdb-dev libdb++-dev
+- sudo apt-get update
+- sudo apt-get install libdb-dev libdb++-dev
 - python --version
 - pip install -U pip
 - pip install -U pytest
@@ -20,7 +20,7 @@ deploy:
   provider: pypi
   username: __token__
   password:
-    secure: QQIy5GXQe4jHBg0wVyGYkFJTD728lrSNvbMFvGVWAK1JsPSZTEU7xfuSHwD0iFTtMe3YSZ/hHLhzLa+Mbj/cvXBAiieGwc8q0iVqwy43gQFYgdYu1AoAivuBZGWTmBhUYE2M0IpxIfaq1TXR2xxNQEL5RteVfIZv/Sp2QxT5euOwRTW70bVcuUw0qRnrXAPzXGDiGGZsPpiM/QZKSt6pt0orAup85OP9Jdz5jCcHPzWvnrEqo+pn5H8w+oEAv1HAxF3vHmEtbi88teVJV08p02R1It4lZ/UFHuQofjBXBZRqYAlQ47aa874slM97f6E6gFWlq0COUrckmJvDgjNaztD88C/sQE7NY9w0Grmfw7sIxe9QZyv1A3y0ULvhUNP042ehDGbWuPv3/0qOpnTDG4k+i8jJQAWQOJeSoRUhTDjuW39GXVtUa0JX1aUtDx0rPzFUKo6eee5WoEpQiEKhqdvqLhn5FIddPj4RGlbid1BXRm501ibr8GDdtFAmjvi+tgrK1BdJFS/HkdSTdPhXL+4SFY3EyIuEl24JO8ATYCMcPBSOpVm1iinw5TW5tR06bn6xngk4T+BTKUsT4Jjf1dJXGKJK9/cX/fI3TaLXcVS9mMnBwcdFIVU1IZDHcCi5LprjOFugkIma+YkdhyC3xTHGBtTgLKE88RXUqb2BCKA=
+    secure: dQYXWF1fTtHJ41hpL+BcCQsaYL08a6uQwcIae6dPLR8xpAqzQt8KM/SQ9B3FGrXXz9XnctUfoWK5m1zHKq2COFpEi9M9Hxu45SzBR0nlS22r97k8cvLz7viyFPvlqNlRk8cFJX8ssc9lZ4U+rRyoGblOKLEiAVCzo0RwGmWTHsogd17pLokFA1GTjxqlYyTzz5F/Z079ufjhIHb6BW8OyY4Akv5L39Jw0JCT8wFR0QS1xmC/6haOnL+A2vJ8KgVXQaYzoeo1FmMVu0OOemxjtuUpILPbGAXN7FIsuhaxIzMWka8CvtPjtWgUmVa2BjsvUzg2YSaOdbMqC3i7LKRK+FbSH3Q2ZbJsuqI7SMJ+47puOHC3fV7Fb8D140vc+TUHiN7mlmQhgQ0T7hOFv3R2sOCDygV018DKPs4qiQaesQ3r7LuDREg7MELdTVuOL68xlBAcquo+raacdsX9QshdMKHgLw2MK7kAxJaDhW3KQz9ZOzYeXdcLjWlP78say372EqbpB4S3GLuRiVMv1ebJ+1Cq72kwGnC1pzQgQZE01PfMnF0HXKBNLouljZmc7MwZsZSllJpaA3t67qibSW4eAqQfMrmlTi5/P7Z8vBEUzgAtYxr74yAUDPQstkWYtbwHCZVIeBuy8GgH43CKV/oE+ZNKA5P+ro2prgfnysqbFis=
   skip_cleanup: true
   on:
     branch: master
