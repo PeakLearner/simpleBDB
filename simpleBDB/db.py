@@ -12,6 +12,7 @@ env = bsddb3.db.DBEnv()
 
 CLOSE_ON_EXIT = []
 
+
 # this prevents lockers/locks from accumulating when python is closed
 # normally, but does not prevent this when we C-c out of the server.
 def close_db():

@@ -1,23 +1,21 @@
 language: python
-
 python:
-  - 3.6
-  - 3.7
-  - 3.8
-
+- 3.6
+- 3.7
+- 3.8
 before_install:
-  - sudo apt update
-  - sudo apt install libdb-dev libdb++-dev
-  - python --version
-  - pip install -U pip
-  - pip install -U pytest
-  - pip install codecov
-
+- sudo apt update
+- sudo apt install libdb-dev libdb++-dev
+- python --version
+- pip install -U pip
+- pip install -U pytest
+- pip install codecov
 install:
-  - pip install .
-
+- pip install .
 script:
-  - pytest
-
+- pytest
 after_success:
-  - codecov
+- codecov
+deploy:
+  password:
+    secure: mQppz84K+1brXYOX/IsQH1/gvCVHhkMxOF17gygPVN5L/tls2UvClkqNFbE1UPWByK2Bbtig+3I7j+KExyLamF1GQgm8STO4FnuvdLW59EwbCyP3uGPdPMdndZFeUEZnhpuOnFiEBP5zMhO91tx8jguHUZtnHn/T6+vXbyhrhx/RGCC+K66Hw9gxuGbQtjdDitxhRfV2taoufYOBYPQGH6X3YVOwV6inuWeGHB1WaNqlIwNRC+dJlep+pbdmxaHk7sucViLHwFG3ERX4aatpq71x+5JbKhmMdjw3a/dz8LoLUWqLdEWvqX2tRgT/aYrl2oc3ggjkZvR6OLTq4UEDLet/L8UQuf2px3N0kuXCnq0HnUG/peKeJ+RvFIPYGBIYZCd8ue4xrP57rplQ9r9f6U5E7QHHgw2V3Fa+yXYrkJzImnTk27jDI50ILce0/9LFKffRt9pW+yt2DFrG0X4VXP/uqj42g+vUOK05dwFrvmIPUCq6wSJT9DaaEVn3OEK4Tb6Rhi8UUWgm8pHOPLdYr8ofFk+9GyzXq1fs4P+vfTaYd7N4SLy2+lwrsP2GIKG2nN01r98DvdbLJeYr/nS54NP1GY5iGF3WwQV4dzCk4F4yhbKWY/dnGgxKox+eUptgXHAQZTQJRTbCsE0REUz7napiLpnp8H0IAvEbRkW+F4s=

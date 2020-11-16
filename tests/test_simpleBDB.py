@@ -112,3 +112,21 @@ def test_container_remove():
     assert len(testContainer.get()) == 1
 
     assert testContainer.get()[0] == 'test2'
+
+
+transactionTestResource = ResourceToTest('b', 'c')
+
+
+def test_transaction():
+
+    transactionTestResource.put('pretransaction')
+
+    txn = db.env.txn_begin()
+
+    assert transactionTestResource.get(txn=txn) == 'pretransaction'
+
+    transactionTestResource.put('postransaction', txn=txn)
+
+    txn.commit()
+
+    assert transactionTestResource.get() == 'postransaction'
