@@ -16,7 +16,6 @@ CLOSE_ON_EXIT = []
 # this prevents lockers/locks from accumulating when python is closed
 # normally, but does not prevent this when we C-c out of the server.
 def close_db():
-    """Closes the DB's when the system is closed with C-c"""
     for db in CLOSE_ON_EXIT:
         db.close()
     env.close()
