@@ -16,9 +16,7 @@ CLOSE_ON_EXIT = []
 # normally, but does not prevent this when we C-c out of the server.
 def close_db():
     """Closes the DB's when the system is closed with C-c"""
-
     for db in CLOSE_ON_EXIT:
-        print('stat', db.stat())
         db.sync()
         db.close()
     env.close()
@@ -37,10 +35,6 @@ class DB(type):
                         bsddb3.db.DB_THREAD |
                         bsddb3.db.DB_CREATE)
             CLOSE_ON_EXIT.append(cls.db)
-
-
-def get_txn():
-    return env.txn_begin()
 
 
 class Resource(metaclass=DB):
@@ -125,13 +119,21 @@ class Resource(metaclass=DB):
     def set_db_key(self):
         self.db_key = to_string(" ".join([str(x) for x in self.values]))
 
-    def alter(self, fun):
+    def alter(self, fun, txn=None):
         """Apply fun to current value and then save it."""
-        txn = env.txn_begin()
+        commit = False
+
+        if txn is None:
+            txn = env.txn_begin()
+            commit = True
+
         before = self.get(txn)
         after = fun(before)
         self.put(after, txn)
-        txn.commit()
+
+        if commit:
+            txn.commit()
+
         return after
 
     def get(self, txn=None):
@@ -160,6 +162,9 @@ class Resource(metaclass=DB):
         else:
             self.db.put(self.db_key, to_string(value), txn=txn)
 
+    def get_txn(self):
+        return env.txn_begin()
+
     def __repr__(self):
         return '%s("%s")' % (self.__class__.__name__, from_string(self.db_key))
 
@@ -169,14 +174,14 @@ class Container(Resource):
 
     Subclasses will require an add_item and remove_item function"""
 
-    def add(self, item):
+    def add(self, item, txn=None):
         self.item = item
-        after = self.alter(self.add_item)
+        after = self.alter(self.add_item, txn)
         return self.item, after
 
-    def remove(self, item):
+    def remove(self, item, txn=None):
         self.item = item
-        after = self.alter(self.remove_item)
+        after = self.alter(self.remove_item, txn)
         return self.removed, after
 
 
