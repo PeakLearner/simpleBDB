@@ -1,6 +1,5 @@
 import pickle
 import os
-import atexit
 # third party module not by me:
 import bsddb3
 
@@ -17,12 +16,12 @@ CLOSE_ON_EXIT = []
 # normally, but does not prevent this when we C-c out of the server.
 def close_db():
     """Closes the DB's when the system is closed with C-c"""
+
     for db in CLOSE_ON_EXIT:
+        print('stat', db.stat())
+        db.sync()
         db.close()
     env.close()
-
-
-atexit.register(close_db)
 
 
 class DB(type):
@@ -33,8 +32,6 @@ class DB(type):
         if "keys" in dir(cls):
             cls.filename = name
             cls.db = bsddb3.db.DB(env)
-            if cls.RE_LEN:
-                cls.db.set_re_len(cls.RE_LEN)
             cls.db.open(cls.filename, None, cls.DBTYPE,
                         bsddb3.db.DB_AUTO_COMMIT |
                         bsddb3.db.DB_THREAD |
@@ -42,10 +39,13 @@ class DB(type):
             CLOSE_ON_EXIT.append(cls.db)
 
 
+def get_txn():
+    return env.txn_begin()
+
+
 class Resource(metaclass=DB):
     """Base class for bsddb3 files"""
     DBTYPE = bsddb3.db.DB_BTREE
-    RE_LEN = 0
 
     @classmethod
     def all(cls):
