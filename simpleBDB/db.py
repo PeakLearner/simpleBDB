@@ -1,5 +1,6 @@
 import pickle
 import os
+import pandas as pd
 # third party module not by me:
 import bsddb3
 
@@ -119,20 +120,14 @@ class Resource(metaclass=DB):
     def set_db_key(self):
         self.db_key = to_string(" ".join([str(x) for x in self.values]))
 
-    def alter(self, fun, txn=None):
+    def alter(self, fun):
         """Apply fun to current value and then save it."""
-        commit = False
-
-        if txn is None:
-            txn = env.txn_begin()
-            commit = True
+        txn = env.txn_begin()
 
         before = self.get(txn)
         after = fun(before)
         self.put(after, txn)
-
-        if commit:
-            txn.commit()
+        txn.commit()
 
         return after
 
@@ -174,15 +169,43 @@ class Container(Resource):
 
     Subclasses will require an add_item and remove_item function"""
 
-    def add(self, item, txn=None):
+    def add(self, item):
         self.item = item
-        after = self.alter(self.add_item, txn)
+        after = self.alter(self.add_item)
         return self.item, after
 
     def remove(self, item, txn=None):
         self.item = item
-        after = self.alter(self.remove_item, txn)
+        after = self.alter(self.remove_item)
         return self.removed, after
+
+
+class PandasDf(Container):
+    """Adds support for using Pandas Data Frames, as well as different ways to add items"""
+    def add_item(self, df):
+        if isinstance(self.item, pd.Series):
+            if len(df.index) >= 1:
+                output = self.addSeries(df)
+            else:
+                output = df.append(self.item, ignore_index=True)
+        elif isinstance(self.item, pd.DataFrame):
+            if len(df.index) >= 1:
+                output = self.addDf(df)
+            else:
+                output = self.item
+        else:
+            print('invalid add with item', self.item,
+                  'of type', type(self.item),
+                  'with db type', self.__class__.__name__)
+            output = df
+
+        try:
+            return self.sortDf(output)
+        except NameError:
+            return output
+
+    def make_details(self):
+        return pd.DataFrame()
 
 
 def to_string(a):
