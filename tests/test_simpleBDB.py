@@ -136,57 +136,14 @@ def test_transaction():
 class pandasTest(db.PandasDf):
     keys = ("First", "Second")
 
-    def addSeries(self, df):
-        df['exists'] = self.item['test'] == df['test']
 
-        if df['exists'].any():
-            output = df.apply(updateInDf, axis=1, args=(self.item,))
-        else:
-            output = df.drop(columns='exists').append(self.item, ignore_index=True)
-        return output
 
-    def addDf(self, df):
-        self.item['exists'] = self.item.apply(checkExists, axis=1, args=(df,))
-
-        exists = self.item[self.item['exists']]
-
-        notExists = self.item[~self.item['exists']]
-
-        updated = df.apply(updateDfWithDf, axis=1, args=(exists,))
-
-        return updated.append(notExists, ignore_index=True).drop(columns='exists')
+    def conditional(self, item, df):
+        return item['test'] == df['test']
 
     def sortDf(self, df):
         return df.sort_values('test', ignore_index=True)
     pass
-
-
-def updateInDf(row, item):
-    if row['exists']:
-        return item
-    return row.drop('exists')
-
-
-def checkExists(row, df):
-    duplicate = df['test'] == row['test']
-    return duplicate.any()
-
-
-def updateDfWithDf(row, df):
-    df['dupe'] = row['test'] == df['test']
-
-    if df['dupe'].any():
-        duped = df[df['dupe']]
-
-        if not len(duped.index) == 1:
-            print('multiple dupes', row, df)
-            raise Exception
-
-        output = duped.iloc[0].drop('dupe')
-    else:
-        output = row
-
-    return output
 
 
 dfTest = pandasTest('a', 'b')

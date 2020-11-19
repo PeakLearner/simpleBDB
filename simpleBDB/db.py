@@ -204,6 +204,53 @@ class PandasDf(Container):
         except NameError:
             return output
 
+    def addDf(self, df):
+        self.item['exists'] = self.item.apply(self.checkExists, axis=1, args=(df,))
+
+        exists = self.item[self.item['exists']]
+
+        notExists = self.item[~self.item['exists']]
+
+        updated = df.apply(self.updateExisting, axis=1, args=(exists,))
+
+        return updated.append(notExists, ignore_index=True).drop(columns='exists')
+
+    def addSeries(self, df):
+        exists = self.conditional(self.item, df).any()
+
+        if exists:
+            return df.apply(self.updateExisting, axis=1, args=(self.item,))
+        else:
+            return df.append(self.item, ignore_index=True)
+
+    def updateExisting(self, row, exists):
+        exists['dupe'] = self.conditional(row, exists)
+
+        if isinstance(exists, pd.Series):
+            if exists['dupe']:
+                return exists.drop('dupe')
+            return row
+        elif isinstance(exists, pd.DataFrame):
+            if exists['dupe'].any():
+                duped = exists[exists['dupe']]
+
+                if not len(duped.index) == 1:
+                    print('multiple dupes', row, exists)
+                    raise Exception
+
+                output = duped.iloc[0].drop('dupe')
+            else:
+                output = row
+        else:
+            print('invalid update with', exists, 'of type', type(exists))
+            raise Exception
+
+        return output
+
+    def checkExists(self, row, df):
+        duplicate = self.conditional(row, df)
+        return duplicate.any()
+
     def make_details(self):
         return pd.DataFrame()
 
