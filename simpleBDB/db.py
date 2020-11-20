@@ -251,6 +251,11 @@ class PandasDf(Container):
         duplicate = self.conditional(row, df)
         return duplicate.any()
 
+    def remove_item(self, df):
+        remove = self.conditional(self.item, df)
+        self.removed = df[remove]
+        return df[~remove]
+
     def make_details(self):
         return pd.DataFrame()
 

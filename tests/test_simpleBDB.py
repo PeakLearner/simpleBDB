@@ -136,8 +136,6 @@ def test_transaction():
 class pandasTest(db.PandasDf):
     keys = ("First", "Second")
 
-
-
     def conditional(self, item, df):
         return item['test'] == df['test']
 
@@ -203,6 +201,11 @@ def testPandasDf():
     test1 = afterDfAdd[afterDfAdd['test'] == 2]
     assert len(test1.index) == 1
     assert test1.iloc[0]['otherVal'] == 'test2'
+
+    toRemove = pd.Series({'test': 2})
+    removed, dfAfterRemove = dfTest.remove(toRemove)
+
+    assert(len(dfAfterRemove.index)) == 3
 
 
 
