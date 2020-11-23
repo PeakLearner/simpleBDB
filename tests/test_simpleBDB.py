@@ -118,21 +118,6 @@ def test_container_remove():
 transactionTestResource = ResourceToTest('b', 'c')
 
 
-def test_transaction():
-
-    transactionTestResource.put('pretransaction')
-
-    txn = db.env.txn_begin()
-
-    assert transactionTestResource.get(txn=txn) == 'pretransaction'
-
-    transactionTestResource.put('postransaction', txn=txn)
-
-    txn.commit()
-
-    assert transactionTestResource.get() == 'postransaction'
-
-
 class pandasTest(db.PandasDf):
     keys = ("First", "Second")
 
