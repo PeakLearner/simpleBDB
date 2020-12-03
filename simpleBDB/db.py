@@ -159,10 +159,6 @@ class Resource(metaclass=DB):
         else:
             self.db.put(self.db_key, to_string(value), txn=txn)
 
-    @classmethod
-    def getTxn(cls):
-        return env.txn_begin()
-
     def __repr__(self):
         return '%s("%s")' % (self.__class__.__name__, from_string(self.db_key))
 
