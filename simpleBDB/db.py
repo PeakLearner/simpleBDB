@@ -32,6 +32,7 @@ class DB(type):
             cls.filename = name
             cls.db = bsddb3.db.DB(env)
             cls.db.open(cls.filename, None, cls.DBTYPE,
+                        bsddb3.db.DB_AUTO_COMMIT |
                         bsddb3.db.DB_THREAD |
                         bsddb3.db.DB_CREATE)
             CLOSE_ON_EXIT.append(cls.db)
@@ -119,21 +120,27 @@ class Resource(metaclass=DB):
     def set_db_key(self):
         self.db_key = to_string(" ".join([str(x) for x in self.values]))
 
-    def alter(self, fun):
+    def alter(self, fun, txn=None):
         """Apply fun to current value and then save it."""
-        before = self.get()
+        commit = False
+        if txn is None:
+            txn = env.txn_begin()
+            commit = True
+        before = self.get(txn)
         after = fun(before)
-        self.put(after)
+        self.put(after, txn)
+        if commit:
+            txn.commit()
 
         return after
 
-    def get(self):
+    def get(self, txn=None):
         """Get method for resource, and its subclasses"""
         if self.db_key not in self.db:
-            return self.make()
-        return from_string(self.db.get(self.db_key))
+            return self.make(txn)
+        return from_string(self.db.get(self.db_key, txn=txn))
 
-    def make(self):
+    def make(self, txn=None):
         """Make function for when object doesn't exist
 
         Override functionality by adding a make_details function to your subclass"""
@@ -141,16 +148,20 @@ class Resource(metaclass=DB):
             made = self.make_details()
         except AttributeError:
             return None
-        self.put(made)
+        self.put(made, txn)
         return made
 
-    def put(self, value):
+    def put(self, value, txn=None):
         """Put method for resource, and its subclasses"""
         if value is None:
             if self.db_key in self.db:
-                self.db.delete(self.db_key)
+                self.db.delete(self.db_key, txn=txn)
         else:
-            self.db.put(self.db_key, to_string(value))
+            self.db.put(self.db_key, to_string(value), txn=txn)
+
+    @classmethod
+    def getTxn(cls):
+        return env.txn_begin()
 
     def __repr__(self):
         return '%s("%s")' % (self.__class__.__name__, from_string(self.db_key))
@@ -161,14 +172,14 @@ class Container(Resource):
 
     Subclasses will require an add_item and remove_item function"""
 
-    def add(self, item):
+    def add(self, item, txn=None):
         self.item = item
-        after = self.alter(self.add_item)
+        after = self.alter(self.add_item, txn=txn)
         return self.item, after
 
     def remove(self, item, txn=None):
         self.item = item
-        after = self.alter(self.remove_item)
+        after = self.alter(self.remove_item, txn=txn)
         return self.removed, after
 
 
@@ -277,5 +288,7 @@ def createEnvWithDir(envPath):
             bsddb3.db.DB_INIT_MPOOL |
             bsddb3.db.DB_THREAD |
             bsddb3.db.DB_INIT_LOCK |
+            bsddb3.db.DB_INIT_TXN |
+            bsddb3.db.DB_INIT_LOG |
             bsddb3.db.DB_CREATE)
         envOpened = True

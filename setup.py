@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="simpleBDB",
-    version="1.0.7",
+    version="1.0.8",
     author="Tristan Miller",
     author_email="Tristan.Miller@nau.edu",
     description="A simple wrapper for bsddb3",
