@@ -16,43 +16,48 @@ class ResourceToTest(db.Resource):
     pass
 
 
-test = ResourceToTest("a", "b")
-
-
 def test_resource_Initialize():
+    test = ResourceToTest("a", "b")
     assert test is not None
 
 
 def test_resource_getNoVal():
+    test = ResourceToTest("a", "b")
     assert test.get() is None
 
 
 def test_resource_put():
+    test = ResourceToTest("a", "b")
+
     test.put('test')
 
     assert len(test.all()) == 1
 
 
 def test_resource_get():
+    test = ResourceToTest("a", "b")
     assert test.get() == 'test'
 
 
-nextTest = ResourceToTest("a", "c")
+
 
 
 def test_resource_put_next():
+    nextTest = ResourceToTest("a", "c")
     nextTest.put('nextTest')
 
-    assert len(test.all()) == 2
+    assert len(nextTest.all()) == 2
 
 
 def test_resource_delete():
+    nextTest = ResourceToTest("a", "c")
     nextTest.put(None)
 
     assert len(nextTest.all()) == 1
 
 
 def test_resource_make_no_make_details():
+    nextTest = ResourceToTest("a", "c")
     assert nextTest.make() is None
 
 
@@ -61,6 +66,7 @@ def alterTest(toAlter):
 
 
 def test_resource_alter():
+    test = ResourceToTest("a", "b")
     test.alter(alterTest)
 
     assert test.get() == 'testaltered'
@@ -94,10 +100,8 @@ class containerTest(db.Container):
         return []
 
 
-testContainer = containerTest('a', 'b')
-
-
 def test_container_add():
+    testContainer = containerTest('a', 'b')
     testContainer.add('test')
 
     assert len(testContainer.get()) == 1
@@ -108,12 +112,12 @@ def test_container_add():
 
 
 def test_container_remove():
+    testContainer = containerTest('a', 'b')
     testContainer.remove('test')
 
     assert len(testContainer.get()) == 1
 
     assert testContainer.get()[0] == 'test2'
-
 
 transactionTestResource = ResourceToTest('b', 'c')
 
@@ -129,11 +133,13 @@ class pandasTest(db.PandasDf):
     pass
 
 
-dfTest = pandasTest('a', 'b')
-otherDfTest = pandasTest('a', 'c')
+
 
 
 def testPandasDf():
+    dfTest = pandasTest('a', 'b')
+    otherDfTest = pandasTest('a', 'c')
+
     initial = dfTest.get()
     assert isinstance(initial, pd.DataFrame)
     assert len(initial.index) == 0
@@ -191,7 +197,6 @@ def testPandasDf():
     removed, dfAfterRemove = dfTest.remove(toRemove)
 
     assert(len(dfAfterRemove.index)) == 3
-
 
 
 

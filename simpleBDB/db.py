@@ -23,6 +23,10 @@ def close_db():
     env.close()
 
 
+def getEnvTxn():
+    return env.txn_begin()
+
+
 class DB(type):
     """Metaclass for Resource objects"""
 
@@ -36,6 +40,9 @@ class DB(type):
                         bsddb3.db.DB_THREAD |
                         bsddb3.db.DB_CREATE)
             CLOSE_ON_EXIT.append(cls.db)
+
+    def getTxn(cls):
+        return cls.db.txn_begin()
 
 
 class Resource(metaclass=DB):
