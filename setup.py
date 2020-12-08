@@ -5,14 +5,14 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="simpleBDB",
-    version="1.0.9",
+    version="1.0.10",
     author="Tristan Miller",
     author_email="Tristan.Miller@nau.edu",
     description="A simple wrapper for bsddb3",
     long_description=long_description,
     long_description_content_type="text/markdown",
     url="https://github.com/deltarod/simpleBDB/",
-    install_requires=['bsddb3', 'pandas'],
+    install_requires=['bsddb3', 'pandas>=1.1.4'],
     packages=['simpleBDB'],
     extras_require={
         'test': ['pytest']
