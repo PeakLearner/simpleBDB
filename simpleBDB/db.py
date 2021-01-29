@@ -133,7 +133,7 @@ class Resource(metaclass=DB):
         if txn is None:
             txn = env.txn_begin()
             commit = True
-        before = self.get(txn)
+        before = self.get(txn, write=True)
         after = fun(before)
         self.put(after, txn)
         if commit:
@@ -141,11 +141,14 @@ class Resource(metaclass=DB):
 
         return after
 
-    def get(self, txn=None):
+    def get(self, txn=None, write=False):
         """Get method for resource, and its subclasses"""
         if self.db_key not in self.db:
             return self.make(txn)
-        return from_string(self.db.get(self.db_key, txn=txn))
+        flags = 0
+        if write:
+            flags = bsddb3.db.DB_RMW
+        return from_string(self.db.get(self.db_key, txn=txn, flags=flags))
 
     def make(self, txn=None):
         """Make function for when object doesn't exist
