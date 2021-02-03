@@ -1,3 +1,4 @@
+import json
 import pickle
 import os
 import pandas as pd
@@ -172,6 +173,95 @@ class Resource(metaclass=DB):
     def __repr__(self):
         return '%s("%s")' % (self.__class__.__name__, from_string(self.db_key))
 
+    @classmethod
+    def doBackup(cls, path, *args):
+        dbPath = os.path.join(path, cls.filename)
+        try:
+            os.makedirs(dbPath)
+        except OSError:
+            return False
+
+        for keys in cls.db_key_tuples():
+            output = cls(*tuple(keys)).dbBackup(dbPath, args)
+            if not output:
+                print(keys)
+
+    @classmethod
+    def doRestore(cls, path, *args):
+        dbPath = os.path.join(path, cls.filename)
+        if os.path.exists(dbPath):
+            keys = cls.getKeysFromFolders(dbPath, len(cls.keys))
+            for key in keys:
+                restore = cls(*tuple(key))
+
+                restorePath = os.path.join(dbPath, *tuple(key[:-1]))
+                file = key[-1] + '.backup'
+
+                restoreFilePath = os.path.join(restorePath, file)
+
+                if os.path.exists(restoreFilePath):
+                    try:
+                        storable = restore.fileToStorable(restoreFilePath)
+                    except pd.errors.EmptyDataError:
+                        continue
+
+                    restore.put(storable)
+                else:
+                    raise Exception
+        else:
+            raise Exception
+
+        return True
+
+    @classmethod
+    def getKeysFromFolders(cls, path, num_keys):
+        output = []
+        if num_keys == 1:
+            for file in os.listdir(path):
+                if '/' in file:
+                    print(file, num_keys)
+                    raise Exception
+                output.append([file.split('.backup')[0]])
+        else:
+            for key in os.listdir(path):
+                keyPath = os.path.join(path, key)
+                prevKeys = cls.getKeysFromFolders(keyPath, num_keys-1)
+                for prevKey in prevKeys:
+                    output.append([key] + prevKey)
+
+        return output
+
+    def fileToStorable(self, filePath):
+        with open(filePath) as f:
+            data = f.read()
+            return self.dataToStorable(data)
+
+    def dataToStorable(self, data):
+        return json.loads(data)
+
+    def dbBackup(self, path, *args):
+        userPath = os.path.join(path, *(self.values[:-1]))
+
+        if not os.path.exists(userPath):
+            try:
+                os.makedirs(userPath)
+            except OSError:
+                return False
+
+        filePath = os.path.join(userPath, self.values[-1] + '.backup')
+
+        return self.saveToFile(filePath, args)
+
+    def saveToFile(self, filePath, *args):
+        value = self.get()
+        converted = self.convertToFile(value, args)
+        with open(filePath, mode='w') as f:
+            f.write(converted)
+        return True
+
+    def convertToFile(self, value, *args):
+        return json.dumps(value)
+
 
 class Container(Resource):
     """Methods to support updating lists or dicts.
@@ -267,6 +357,17 @@ class PandasDf(Container):
 
     def make_details(self):
         return pd.DataFrame()
+
+    def saveToFile(self, filePath, *args):
+        value = self.get()
+
+        value.to_csv(filePath, sep='\t', index=False)
+
+        return True
+
+    def fileToStorable(self, filePath):
+        df = pd.read_csv(filePath, sep='\t')
+        return df
 
 
 def to_string(a):
