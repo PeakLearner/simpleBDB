@@ -109,7 +109,7 @@ class Resource(metaclass=DB):
 
     @classmethod
     def has_key(cls, k):
-        return k in cls.db
+        return to_string(k) in cls.db
 
     def __init__(self, *args):
         if len(args) != len(self.keys):
@@ -360,6 +360,8 @@ class PandasDf(Container):
 
     def saveToFile(self, filePath, *args):
         value = self.get()
+        if value.empty:
+            return
 
         value.to_csv(filePath, sep='\t', index=False)
 
