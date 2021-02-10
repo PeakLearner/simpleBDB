@@ -39,9 +39,6 @@ def test_resource_get():
     assert test.get() == 'test'
 
 
-
-
-
 def test_resource_put_next():
     nextTest = ResourceToTest("a", "c")
     nextTest.put('nextTest')
@@ -67,7 +64,9 @@ def alterTest(toAlter):
 
 def test_resource_alter():
     test = ResourceToTest("a", "b")
-    test.alter(alterTest)
+    txn = db.getEnvTxn()
+    test.alter(alterTest, txn=txn)
+    txn.commit()
 
     assert test.get() == 'testaltered'
 
@@ -102,22 +101,29 @@ class containerTest(db.Container):
 
 def test_container_add():
     testContainer = containerTest('a', 'b')
-    testContainer.add('test')
+    txn = db.getEnvTxn()
+    testContainer.add('test', txn=txn)
+    txn.commit()
 
     assert len(testContainer.get()) == 1
 
-    testContainer.add('test2')
+    txn = db.getEnvTxn()
+    testContainer.add('test2', txn=txn)
+    txn.commit()
 
     assert len(testContainer.get()) == 2
 
 
 def test_container_remove():
     testContainer = containerTest('a', 'b')
-    testContainer.remove('test')
+    txn = db.getEnvTxn()
+    testContainer.remove('test', txn=txn)
+    txn.commit()
 
     assert len(testContainer.get()) == 1
 
     assert testContainer.get()[0] == 'test2'
+
 
 transactionTestResource = ResourceToTest('b', 'c')
 
@@ -133,9 +139,6 @@ class pandasTest(db.PandasDf):
     pass
 
 
-
-
-
 def testPandasDf():
     dfTest = pandasTest('a', 'b')
     otherDfTest = pandasTest('a', 'c')
@@ -145,19 +148,25 @@ def testPandasDf():
     assert len(initial.index) == 0
 
     seriesToAdd = pd.Series({'test': 1, 'otherVal': 'test'})
-    dfTest.add(seriesToAdd)
+    txn = db.getEnvTxn()
+    dfTest.add(seriesToAdd, txn=txn)
+    txn.commit()
     afterSeriesAdd = dfTest.get()
     assert isinstance(afterSeriesAdd, pd.DataFrame)
     assert len(afterSeriesAdd.index) == 1
 
     otherSeriesToAdd = pd.Series({'test': 0, 'otherVal': 'test0'})
-    dfTest.add(otherSeriesToAdd)
+    txn = db.getEnvTxn()
+    dfTest.add(otherSeriesToAdd, txn=txn)
+    txn.commit()
     afterOtherSeriesAdd = dfTest.get()
     assert isinstance(afterOtherSeriesAdd, pd.DataFrame)
     assert len(afterOtherSeriesAdd.index) == 2
 
     updateOtherSeries = pd.Series({'test': 0, 'otherVal': 'updatedWithSeries'})
-    dfTest.add(updateOtherSeries)
+    txn = db.getEnvTxn()
+    dfTest.add(updateOtherSeries, txn=txn)
+    txn.commit()
     afterSeriesUpdate = dfTest.get()
     assert isinstance(afterSeriesUpdate, pd.DataFrame)
     assert len(afterSeriesUpdate.index) == 2
@@ -171,12 +180,16 @@ def testPandasDf():
     assert len(otherInit.index) == 0
 
     dfToAdd = pd.DataFrame({'test': [1, 2, 3], 'otherVal': ['updatedWithDf', 'test2', 'test3']})
-    otherDfTest.add(dfToAdd)
+    txn = db.getEnvTxn()
+    otherDfTest.add(dfToAdd, txn=txn)
+    txn.commit()
     afterOtherAddDf = otherDfTest.get()
     assert isinstance(afterOtherAddDf, pd.DataFrame)
     assert len(afterOtherAddDf.index) == 3
 
-    dfTest.add(dfToAdd)
+    txn = db.getEnvTxn()
+    dfTest.add(dfToAdd, txn=txn)
+    txn.commit()
     afterDfAdd = dfTest.get()
     assert isinstance(afterDfAdd, pd.DataFrame)
     assert len(afterDfAdd.index) == 4
@@ -194,7 +207,9 @@ def testPandasDf():
     assert test1.iloc[0]['otherVal'] == 'test2'
 
     toRemove = pd.Series({'test': 2})
-    removed, dfAfterRemove = dfTest.remove(toRemove)
+    txn = db.getEnvTxn()
+    removed, dfAfterRemove = dfTest.remove(toRemove, txn=txn)
+    txn.commit()
 
     assert(len(dfAfterRemove.index)) == 3
 

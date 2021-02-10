@@ -51,6 +51,10 @@ class Resource(metaclass=DB):
     DBTYPE = bsddb3.db.DB_BTREE
 
     @classmethod
+    def length(cls):
+        return len(cls.db.keys())
+
+    @classmethod
     def all(cls):
         return [cls(*tup).get() for tup in cls.db_key_tuples()]
 
@@ -130,16 +134,9 @@ class Resource(metaclass=DB):
 
     def alter(self, fun, txn=None):
         """Apply fun to current value and then save it."""
-        commit = False
-        if txn is None:
-            txn = env.txn_begin()
-            commit = True
-        before = self.get(txn, write=True)
+        before = self.get(txn=txn, write=True)
         after = fun(before)
-        self.put(after, txn)
-        if commit:
-            txn.commit()
-
+        self.put(after, txn=txn)
         return after
 
     def get(self, txn=None, write=False):
