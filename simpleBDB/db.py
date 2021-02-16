@@ -66,6 +66,28 @@ class Resource(metaclass=DB):
     def db_key_tuples(cls):
         return [k.split(" ") for k in cls.db_keys()]
 
+    @classmethod
+    def keysWhichMatch(cls, *args):
+        """Get all keys matching the passed values"""
+        if len(cls.keys) < len(args):
+            raise ValueError('Number of keys provided is too long.\n'
+                             'Len Class Keys: %s\n'
+                             'Len Provided Keys: %s\n' % (len(cls.keys), len(args)))
+
+        index = 0
+        output = cls.db_key_tuples()
+
+        for keyToCheck in args:
+            temp = []
+            for key in output:
+                if key[index] == keyToCheck:
+                    temp.append(key)
+
+            index += 1
+            output = temp
+
+        return output
+
     def rename(self, **kwargs):
         """Read data for this key, delete that db entry, and save it under another key"""
         for k in kwargs:

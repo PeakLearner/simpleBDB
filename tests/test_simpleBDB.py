@@ -1,6 +1,7 @@
 import simpleBDB as db
 import os
 import pandas as pd
+import pytest
 
 testDir = 'testDb'
 
@@ -214,7 +215,17 @@ def testPandasDf():
     assert(len(dfAfterRemove.index)) == 3
 
 
+def testWithMatch():
+    with pytest.raises(ValueError) as err:
+        pandasTest.keysWhichMatch('a', 'b', 'c')
 
+    withA = pandasTest.keysWhichMatch('a')
+
+    assert len(withA) == 2
+
+    withAB = pandasTest.keysWhichMatch('a', 'b')
+
+    assert len(withAB) == 1
 
 
 
