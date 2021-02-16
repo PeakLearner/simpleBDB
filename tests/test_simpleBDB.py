@@ -227,6 +227,9 @@ def testWithMatch():
 
     assert len(withAB) == 1
 
+    with pytest.raises(ValueError) as err:
+        pandasTest.keysWhichMatch()
+
 
 
 
