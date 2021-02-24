@@ -69,10 +69,18 @@ class Resource(metaclass=DB):
     @classmethod
     def keysWhichMatch(cls, *args):
         """Get all keys matching the passed values"""
-        if len(cls.keys) < len(args) > 0:
+        lenArgs = len(args)
+        if len(cls.keys) < lenArgs:
             raise ValueError('Number of keys provided is too long.\n'
                              'Len Class Keys: %s\n'
                              'Len Provided Keys: %s\n' % (len(cls.keys), len(args)))
+
+        if lenArgs <= 0:
+            raise ValueError('Number of keys provided is too short.\n'
+                             'Len Class Keys: %s\n'
+                             'Len Provided Keys: %s\n' % (len(cls.keys), len(args)))
+
+
 
         index = 0
         output = cls.db_key_tuples()
