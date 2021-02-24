@@ -55,8 +55,8 @@ class Resource(metaclass=DB):
         return len(cls.db.keys())
 
     @classmethod
-    def all(cls):
-        return [cls(*tup).get() for tup in cls.db_key_tuples()]
+    def all(cls, txn=None):
+        return [cls(*tup).get(txn=txn) for tup in cls.db_key_tuples()]
 
     @classmethod
     def db_keys(cls):
