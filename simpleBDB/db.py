@@ -3,13 +3,15 @@ import pickle
 import os
 import pandas as pd
 # third party module not by me:
-import bsddb3
+import bsddb3.db as db
 
 # For more info on bsddb3 see here: http://pybsddb.sourceforge.net/bsddb3.html
 
 # Setup Berkeley DB Env
 # More info n the flags can be found here: https://docs.oracle.com/cd/E17276_01/html/api_reference/C/envopen.html
-env = bsddb3.db.DBEnv()
+env = db.DBEnv()
+
+
 
 CLOSE_ON_EXIT = []
 
@@ -31,24 +33,76 @@ def getEnvTxn():
 class DB(type):
     """Metaclass for Resource objects"""
 
+    notFound = db.DB_NOTFOUND
+
     def __init__(cls, name, bases, dct):
         """Called when Resource and each subclass is defined"""
         if "keys" in dir(cls):
             cls.filename = name
-            cls.db = bsddb3.db.DB(env)
+            cls.db = db.DB(env)
             cls.db.open(cls.filename, None, cls.DBTYPE,
-                        bsddb3.db.DB_AUTO_COMMIT |
-                        bsddb3.db.DB_THREAD |
-                        bsddb3.db.DB_CREATE)
+                        db.DB_AUTO_COMMIT |
+                        db.DB_THREAD |
+                        db.DB_CREATE)
             CLOSE_ON_EXIT.append(cls.db)
 
-    def getTxn(cls):
-        return cls.db.txn_begin()
+    def getCursor(cls, txn=None, readCommited=False, bulk=False):
+
+        flags = 0
+
+        if readCommited:
+            if flags != 0:
+                flags = flags | db.DB_READ_COMMITTED
+            else:
+                flags = db.DB_READ_COMMITTED
+
+        if bulk:
+            if flags != 0:
+                flags = flags | db.DB_CURSOR_BULK
+            else:
+                flags = db.DB_CURSOR_BULK
+
+        return Cursor(cls.db.cursor(txn=txn, flags=flags))
+
+
+class Cursor:
+    def __init__(self, cursor):
+        self.cursor = cursor
+
+    def get(self, flags=0):
+        returnVal = self.cursor.get(flags=flags)
+        if returnVal is None:
+            return None
+        else:
+            key, value = returnVal
+            return from_string(key), from_string(value)
+
+    def getWithKey(self, key, flags=db.DB_SET):
+        key = tupleToKey(tupleToStrings(key))
+        out = self.cursor.get(key, flags=flags)
+        if out is None:
+            return None
+        else:
+            key, value = out
+            return from_string(key), from_string(value)
+
+    def put(self, value, flags=db.DB_CURRENT):
+        return self.cursor.put(to_string(value), flags=flags)
+
+    def close(self):
+        return self.cursor.close()
+
+
+def tupleToKey(tupleToConvert):
+    return to_string(" ".join([str(x) for x in tupleToConvert]))
+
+def tupleToStrings(tupleToStr):
+    return [str(a) for a in tupleToStr]
 
 
 class Resource(metaclass=DB):
     """Base class for bsddb3 files"""
-    DBTYPE = bsddb3.db.DB_BTREE
+    DBTYPE = db.DB_BTREE
 
     @classmethod
     def length(cls):
@@ -79,8 +133,6 @@ class Resource(metaclass=DB):
             raise ValueError('Number of keys provided is too short.\n'
                              'Len Class Keys: %s\n'
                              'Len Provided Keys: %s\n' % (len(cls.keys), len(args)))
-
-
 
         index = 0
         output = cls.db_key_tuples()
@@ -152,15 +204,15 @@ class Resource(metaclass=DB):
                     len(self.keys),
                     ", ".join([from_string(x) for x in self.keys]),
                 ))
-        self.values = [str(a) for a in args]
+        self.values = tupleToStrings(args)
         for a in self.values:
             if " " in a:
-                raise ValueError("values should have no spaces")
+                raise ValueError("values should have no spaces", self.values)
         self.info = dict(zip(self.keys, self.values))
         self.set_db_key()
 
     def set_db_key(self):
-        self.db_key = to_string(" ".join([str(x) for x in self.values]))
+        self.db_key = tupleToKey(self.values)
 
     def alter(self, fun, txn=None):
         """Apply fun to current value and then save it."""
@@ -175,7 +227,7 @@ class Resource(metaclass=DB):
             return self.make(txn)
         flags = 0
         if write:
-            flags = bsddb3.db.DB_RMW
+            flags = db.DB_RMW
         return from_string(self.db.get(self.db_key, txn=txn, flags=flags))
 
     def make(self, txn=None):
@@ -421,10 +473,10 @@ def createEnvWithDir(envPath):
             os.makedirs(envPath)
         env.open(
             envPath,
-            bsddb3.db.DB_INIT_MPOOL |
-            bsddb3.db.DB_THREAD |
-            bsddb3.db.DB_INIT_LOCK |
-            bsddb3.db.DB_INIT_TXN |
-            bsddb3.db.DB_INIT_LOG |
-            bsddb3.db.DB_CREATE)
+            db.DB_INIT_MPOOL |
+            db.DB_THREAD |
+            db.DB_INIT_LOCK |
+            db.DB_INIT_TXN |
+            db.DB_INIT_LOG |
+            db.DB_CREATE)
         envOpened = True

@@ -2,6 +2,7 @@ import simpleBDB as db
 import os
 import pandas as pd
 import pytest
+import bsddb3
 
 testDir = 'testDb'
 
@@ -229,6 +230,52 @@ def testWithMatch():
 
     with pytest.raises(ValueError) as err:
         pandasTest.keysWhichMatch()
+
+
+class CursorTest(db.Resource):
+    keys = ('first',)
+
+    pass
+
+
+def testCursors():
+
+    txn = db.getEnvTxn()
+
+    CursorTest('1').put(1, txn=txn)
+
+    CursorTest('2').put(2, txn=txn)
+
+    txn.commit()
+
+    txn = db.getEnvTxn()
+
+    cursor = CursorTest.getCursor(txn=txn, bulk=True)
+
+    firstKey, firstValue = cursor.get(flags=bsddb3.db.DB_NEXT)
+
+    assert firstKey == '1'
+    assert firstValue == 1
+
+    secondKey, secondValue = cursor.get(flags=bsddb3.db.DB_NEXT)
+
+    assert secondKey == '2'
+    assert secondValue == 2
+
+    # Nothing left in db
+    out = cursor.get(flags=bsddb3.db.DB_NEXT)
+
+    assert out is None
+
+    withKeyKey, withKeyValue = cursor.getWithKey(firstKey, flags=bsddb3.db.DB_SET)
+
+    assert withKeyKey == '1'
+    assert withKeyValue == 1
+
+    cursor.close()
+
+    txn.commit()
+
 
 
 
