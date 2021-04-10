@@ -7,27 +7,37 @@ import bsddb3.db as db
 
 # For more info on bsddb3 see here: http://pybsddb.sourceforge.net/bsddb3.html
 
-# Setup Berkeley DB Env
-# More info n the flags can be found here: https://docs.oracle.com/cd/E17276_01/html/api_reference/C/envopen.html
-env = db.DBEnv()
+env = None
 
-
-
-CLOSE_ON_EXIT = []
+DBS = []
 
 
 # this prevents lockers/locks from accumulating when python is closed
 # normally, but does not prevent this when we C-c out of the server.
-def close_db():
+def close_dbs():
     """Closes the DB's when the system is closed with C-c"""
-    for db in CLOSE_ON_EXIT:
-        db.sync()
-        db.close()
-    env.close()
+    for dbToClose in DBS:
+        dbToClose.close()
+
+
+def open_dbs():
+    for dbToOpen in DBS:
+        dbToOpen.setDB()
 
 
 def getEnvTxn():
-    return env.txn_begin()
+    if env is None:
+        raise EnvNotCreatedException
+    else:
+        return env.txn_begin()
+
+
+class EnvNotCreatedException(Exception):
+    pass
+
+
+class DBNeverOpenedException(Exception):
+    pass
 
 
 class DB(type):
@@ -35,18 +45,36 @@ class DB(type):
 
     notFound = db.DB_NOTFOUND
 
+    db = None
+
+
+    db = None
+
     def __init__(cls, name, bases, dct):
         """Called when Resource and each subclass is defined"""
+        super().__init__(name, bases, dct)
         if "keys" in dir(cls):
             cls.filename = name
-            cls.db = db.DB(env)
-            cls.db.open(cls.filename, None, cls.DBTYPE,
-                        db.DB_AUTO_COMMIT |
-                        db.DB_THREAD |
-                        db.DB_CREATE)
-            CLOSE_ON_EXIT.append(cls.db)
+            DBS.append(cls)
+
+    def setDB(cls):
+        if env is None:
+            raise EnvNotCreatedException
+        cls.db = db.DB(env)
+        cls.db.open(cls.filename, None, cls.DBTYPE,
+                    db.DB_AUTO_COMMIT |
+                    db.DB_THREAD |
+                    db.DB_CREATE)
+
+    def close(cls):
+        if cls.db is None:
+            raise DBNeverOpenedException
+        cls.db.close()
 
     def getCursor(cls, txn=None, readCommited=False, bulk=False):
+
+        if cls.db is None:
+            raise DBNeverOpenedException
 
         flags = 0
 
@@ -87,7 +115,21 @@ class Cursor:
             return from_string(key), from_string(value)
 
     def put(self, value, flags=db.DB_CURRENT):
-        return self.cursor.put(to_string(value), flags=flags)
+        self.cursor.put(to_string(value), flags=flags)
+
+    def putWithKey(self, key, value, flags=db.DB_SET):
+        key = tupleToKey(tupleToStrings(key))
+        return self.cursor.put(key, to_string(value), flags=flags)
+
+    def next(self, flags=0):
+        output = self.cursor.next(flags=flags)
+        if output is None:
+            return None
+        key, value = output
+        return from_string(key), from_string(value)
+
+    def dup(self, flags=db.DB_POSITION):
+        return self.cursor.dup(flags=flags)
 
     def close(self):
         return self.cursor.close()
@@ -95,6 +137,7 @@ class Cursor:
 
 def tupleToKey(tupleToConvert):
     return to_string(" ".join([str(x) for x in tupleToConvert]))
+
 
 def tupleToStrings(tupleToStr):
     return [str(a) for a in tupleToStr]
@@ -304,7 +347,7 @@ class Resource(metaclass=DB):
         else:
             for key in os.listdir(path):
                 keyPath = os.path.join(path, key)
-                prevKeys = cls.getKeysFromFolders(keyPath, num_keys-1)
+                prevKeys = cls.getKeysFromFolders(keyPath, num_keys - 1)
                 for prevKey in prevKeys:
                     output.append([key] + prevKey)
 
@@ -360,6 +403,7 @@ class Container(Resource):
 
 class PandasDf(Container):
     """Adds support for using Pandas Data Frames, as well as different ways to add items"""
+
     def add_item(self, df):
         if isinstance(self.item, pd.Series):
             if len(df.index) >= 1:
@@ -466,17 +510,17 @@ def createEnvWithDir(envPath):
     """creates the DBEnv using envPath, Must be called before using the DB
 
     envPath: The directory where the db will be stored"""
-    global envOpened
+    global env
 
-    if not envOpened:
-        if not os.path.exists(envPath):
-            os.makedirs(envPath)
-        env.open(
-            envPath,
-            db.DB_INIT_MPOOL |
-            db.DB_THREAD |
-            db.DB_INIT_LOCK |
-            db.DB_INIT_TXN |
-            db.DB_INIT_LOG |
-            db.DB_CREATE)
-        envOpened = True
+    if not os.path.exists(envPath):
+        os.makedirs(envPath)
+
+    env = db.DBEnv()
+    env.open(
+        envPath,
+        db.DB_INIT_MPOOL |
+        db.DB_THREAD |
+        db.DB_INIT_LOCK |
+        db.DB_INIT_TXN |
+        db.DB_INIT_LOG |
+        db.DB_CREATE)

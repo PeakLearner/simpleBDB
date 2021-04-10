@@ -277,7 +277,7 @@ def testCursors():
     txn.commit()
 
 
-
+db.open_dbs()
 
 
 
