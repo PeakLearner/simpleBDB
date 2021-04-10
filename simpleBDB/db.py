@@ -92,6 +92,11 @@ class DB(type):
 
         return Cursor(cls.db.cursor(txn=txn, flags=flags))
 
+    def syncDb(cls):
+        if cls.db is None:
+            raise DBNeverOpenedException
+        cls.db.sync()
+
 
 class Cursor:
     def __init__(self, cursor):
