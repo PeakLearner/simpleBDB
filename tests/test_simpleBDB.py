@@ -1,10 +1,15 @@
 import simpleBDB as db
 import os
+import shutil
 import pandas as pd
 import pytest
 import bsddb3
+import random
 
 testDir = 'testDb'
+
+if os.path.exists('testDb'):
+    shutil.rmtree('testDb')
 
 db.createEnvWithDir(testDir)
 
@@ -307,6 +312,83 @@ def testCursorzDuplicate():
 
     cursor.close()
     txn.commit()
+
+
+def testCursorzzPut():
+
+    txn = db.getEnvTxn()
+    cursor = CursorTest.getCursor(txn=txn, bulk=True)
+
+    current = cursor.next(flags=bsddb3.db.DB_RMW)
+
+    while current is not None:
+        key, value = current
+
+        print(key, value)
+
+        toPut = value - 0.5
+
+        cursor.put(key, toPut)
+
+        current = cursor.next(flags=bsddb3.db.DB_RMW)
+
+    cursor.close()
+    txn.commit()
+
+    txn = db.getEnvTxn()
+    cursor = CursorTest.getCursor(txn=txn, bulk=True)
+
+    current = cursor.next(flags=bsddb3.db.DB_RMW)
+
+    # check that the changes went into effect
+    while current is not None:
+        key, value = current
+
+        assert int(key) == value + 0.5
+
+        current = cursor.next(flags=bsddb3.db.DB_RMW)
+
+    cursor.close()
+    txn.commit()
+
+
+def testCursorzzzPutLaterWithDup():
+    toSelect = round((len(CursorTest.db_keys()) - 1) * random.random()) + 1
+    txn = db.getEnvTxn()
+    cursor = CursorTest.getCursor(txn=txn, bulk=True)
+    randomSelected = None
+
+    current = cursor.next(flags=bsddb3.db.DB_RMW)
+
+    while current is not None:
+        key, value = current
+
+        if int(key) == toSelect:
+            randomSelected = cursor.dup()
+
+        current = cursor.next(flags=bsddb3.db.DB_RMW)
+
+    cursor.close()
+
+    toUpdate = randomSelected.current()
+
+    assert toUpdate is not None
+
+    key, value = toUpdate
+
+    assert int(key) == toSelect
+
+    value += 0.25
+
+    randomSelected.put(key, value)
+
+    randomSelected.close()
+    txn.commit()
+
+    toCheck = CursorTest(str(toSelect)).get()
+
+    assert value == toCheck
+
 
 db.open_dbs()
 

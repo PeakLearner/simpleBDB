@@ -119,12 +119,9 @@ class Cursor:
             key, value = out
             return from_string(key), from_string(value)
 
-    def put(self, value, flags=db.DB_CURRENT):
-        self.cursor.put(to_string(value), flags=flags)
-
-    def putWithKey(self, key, value, flags=db.DB_SET):
-        key = tupleToKey(tupleToStrings(key))
-        return self.cursor.put(key, to_string(value), flags=flags)
+    def put(self, key, value, flags=db.DB_CURRENT):
+        key = tupleToKey(key)
+        self.cursor.put(key, to_string(value), flags=flags)
 
     def next(self, flags=0):
         output = self.cursor.next(flags=flags)
