@@ -131,13 +131,29 @@ class Cursor:
         if output is None:
             return None
         key, value = output
-        return from_string(key), from_string(value)
+
+        try:
+            return from_string(key), from_string(value)
+        except TypeError:
+            return key, value
 
     def dup(self, flags=db.DB_POSITION):
-        return self.cursor.dup(flags=flags)
+        return Cursor(self.cursor.dup(flags))
 
     def close(self):
         return self.cursor.close()
+
+    def current(self, flags=0):
+        output = self.cursor.current(flags=flags)
+        if output is None:
+            return None
+        key, value = output
+
+        try:
+            return from_string(key), from_string(value)
+        except TypeError:
+            return key, value
+
 
 
 def tupleToKey(tupleToConvert):

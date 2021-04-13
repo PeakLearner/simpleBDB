@@ -240,15 +240,14 @@ class CursorTest(db.Resource):
 
 def testCursors():
 
-    txn = db.getEnvTxn()
-
-    CursorTest('1').put(1, txn=txn)
-
-    CursorTest('2').put(2, txn=txn)
-
-    txn.commit()
+    for i in range(1, 3):
+        txn = db.getEnvTxn()
+        CursorTest(str(i)).put(i, txn=txn)
+        txn.commit()
 
     txn = db.getEnvTxn()
+
+    assert len(CursorTest.db_keys()) == 2
 
     cursor = CursorTest.getCursor(txn=txn, bulk=True)
 
@@ -276,6 +275,38 @@ def testCursors():
 
     txn.commit()
 
+
+def testCursorzDuplicate():
+
+    for i in range(3, 11):
+        txn = db.getEnvTxn()
+        CursorTest(str(i)).put(i, txn=txn)
+        txn.commit()
+
+    assert len(CursorTest.db_keys()) == 10
+
+    txn = db.getEnvTxn()
+    cursor = CursorTest.getCursor(txn=txn, bulk=True)
+    prev = None
+
+    # Testing next and dup functions
+    for i in range(1, 11):
+        key, current = cursor.next()
+
+        assert current == i
+
+        if prev is None:
+            prev = cursor.dup()
+
+        else:
+            prevKey, prevCurrent = prev.current()
+
+            assert prevCurrent + 1 == current
+
+            prev = cursor.dup()
+
+    cursor.close()
+    txn.commit()
 
 db.open_dbs()
 
