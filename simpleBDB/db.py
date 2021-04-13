@@ -47,9 +47,6 @@ class DB(type):
 
     db = None
 
-
-    db = None
-
     def __init__(cls, name, bases, dct):
         """Called when Resource and each subclass is defined"""
         super().__init__(name, bases, dct)
@@ -129,10 +126,7 @@ class Cursor:
             return None
         key, value = output
 
-        try:
-            return from_string(key), from_string(value)
-        except TypeError:
-            return key, value
+        return from_string(key), from_string(value)
 
     def dup(self, flags=db.DB_POSITION):
         return Cursor(self.cursor.dup(flags))
