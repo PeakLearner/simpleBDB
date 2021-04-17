@@ -278,8 +278,12 @@ class Resource(metaclass=DB):
 
     def get(self, txn=None, write=False):
         """Get method for resource, and its subclasses"""
-        if self.db_key not in self.db:
-            return self.make(txn)
+        try:
+            if self.db_key not in self.db:
+                return self.make(txn)
+        except AttributeError:
+            txn.abort()
+            raise DBNeverOpenedException
         flags = 0
         if write:
             flags = db.DB_RMW
