@@ -7,9 +7,8 @@ import bsddb3.db as db
 
 # For more info on bsddb3 see here: http://pybsddb.sourceforge.net/bsddb3.html
 
-env = None
-
 DBS = []
+env = db.DBEnv()
 
 
 # this prevents lockers/locks from accumulating when python is closed
@@ -526,12 +525,10 @@ def createEnvWithDir(envPath):
     """creates the DBEnv using envPath, Must be called before using the DB
 
     envPath: The directory where the db will be stored"""
-    global env
 
     if not os.path.exists(envPath):
         os.makedirs(envPath)
 
-    env = db.DBEnv()
     env.open(
         envPath,
         db.DB_INIT_MPOOL |
