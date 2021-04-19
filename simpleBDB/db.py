@@ -52,6 +52,7 @@ class DB(type):
         if "keys" in dir(cls):
             cls.filename = name
             DBS.append(cls)
+            cls.setDB()
 
     def setDB(cls):
         if env is None:
