@@ -86,7 +86,7 @@ class DB(type):
             else:
                 flags = db.DB_CURSOR_BULK
 
-        return Cursor(cls.db.cursor(txn=txn, flags=flags))
+        return Cursor(cls.db.cursor(txn=txn, flags=flags), cls)
 
     def syncDb(cls):
         if cls.db is None:
@@ -95,8 +95,9 @@ class DB(type):
 
 
 class Cursor:
-    def __init__(self, cursor):
+    def __init__(self, cursor, parent):
         self.cursor = cursor
+        self.parent = parent
 
     def get(self, flags=0):
         returnVal = self.cursor.get(flags=flags)
@@ -104,20 +105,22 @@ class Cursor:
             return None
         else:
             key, value = returnVal
-            return from_string(key), from_string(value)
+            print(key)
+            return self.parent.fromKeyStore(key), self.parent.fromStorable(value)
 
     def getWithKey(self, key, flags=db.DB_SET):
-        key = tupleToKey(tupleToStrings(key))
+        print(key)
+        key = self.parent.toKeyStore(key)
+        print(key)
         out = self.cursor.get(key, flags=flags)
         if out is None:
             return None
         else:
             key, value = out
-            return from_string(key), from_string(value)
+            return self.parent.fromKeyStore(key), self.parent.fromStorable(value)
 
     def put(self, key, value, flags=db.DB_CURRENT):
-        key = tupleToKey(key)
-        self.cursor.put(key, to_string(value), flags=flags)
+        self.cursor.put(self.parent.toKeyStore(key), self.parent.toStorable(value), flags=flags)
 
     def next(self, flags=0):
         output = self.cursor.next(flags=flags)
@@ -125,10 +128,10 @@ class Cursor:
             return None
         key, value = output
 
-        return from_string(key), from_string(value)
+        return self.parent.fromKeyStore(key), self.parent.fromStorable(value)
 
     def dup(self, flags=db.DB_POSITION):
-        return Cursor(self.cursor.dup(flags))
+        return Cursor(self.cursor.dup(flags), self.parent)
 
     def close(self):
         return self.cursor.close()
@@ -140,23 +143,45 @@ class Cursor:
         key, value = output
 
         try:
-            return from_string(key), from_string(value)
+            return self.parent.fromKeyStore(key), self.parent.fromStorable(value)
         except TypeError:
             return key, value
-
-
-
-def tupleToKey(tupleToConvert):
-    return to_string(" ".join([str(x) for x in tupleToConvert]))
-
-
-def tupleToStrings(tupleToStr):
-    return [str(a) for a in tupleToStr]
 
 
 class Resource(metaclass=DB):
     """Base class for bsddb3 files"""
     DBTYPE = db.DB_BTREE
+
+    @classmethod
+    def fromKeyStore(cls, key):
+        """Converts a key from the DB into a list of str key entries"""
+        return pickle.loads(key)
+
+    @classmethod
+    def toKeyStore(cls, key):
+        """Converts a list of str key entries into a key which can be used by the DB"""
+        return pickle.dumps(key, 1)
+
+    @classmethod
+    def keyToEntryTuple(cls, key):
+        """Checks that each key doesn't contain a space, then creates a tuple of the keys as str's"""
+        output = []
+        for entry in key:
+            if ' ' in entry:
+                raise ValueError("values should have no spaces", key)
+            output.append(str(entry))
+
+        return tuple(output)
+
+
+    @classmethod
+    def fromStorable(cls, storable):
+        """Takes the output from the DB and converts it to the way it should be"""
+        return pickle.loads(storable)
+
+    @classmethod
+    def toStorable(cls, data):
+        return pickle.dumps(data, 1)
 
     @classmethod
     def length(cls):
@@ -168,11 +193,11 @@ class Resource(metaclass=DB):
 
     @classmethod
     def db_keys(cls):
-        return [from_string(k) for k in cls.db.keys()]
+        return [pickle.loads(k) for k in cls.db.keys()]
 
     @classmethod
     def db_key_tuples(cls):
-        return [k.split(" ") for k in cls.db_keys()]
+        return [k for k in cls.db_keys()]
 
     @classmethod
     def keysWhichMatch(cls, *args):
@@ -194,7 +219,7 @@ class Resource(metaclass=DB):
         for keyToCheck in args:
             temp = []
             for key in output:
-                if key[index] == keyToCheck:
+                if key[index] == str(keyToCheck):
                     temp.append(key)
 
             index += 1
@@ -249,24 +274,22 @@ class Resource(metaclass=DB):
 
     @classmethod
     def has_key(cls, k):
-        return to_string(k) in cls.db
+        return cls.toKeyStore(k) in cls.db
 
     def __init__(self, *args):
         if len(args) != len(self.keys):
             raise ValueError(
                 "should have exactly %d args: %s" % (
                     len(self.keys),
-                    ", ".join([from_string(x) for x in self.keys]),
+                    ", ".join(self.fromKeyStore(self.keys)),
                 ))
-        self.values = tupleToStrings(args)
-        for a in self.values:
-            if " " in a:
-                raise ValueError("values should have no spaces", self.values)
+        self.values = self.keyToEntryTuple(args)
+        print(self.values)
         self.info = dict(zip(self.keys, self.values))
         self.set_db_key()
 
     def set_db_key(self):
-        self.db_key = tupleToKey(self.values)
+        self.db_key = self.toKeyStore(self.values)
 
     def alter(self, fun, txn=None):
         """Apply fun to current value and then save it."""
@@ -286,7 +309,7 @@ class Resource(metaclass=DB):
         flags = 0
         if write:
             flags = db.DB_RMW
-        return from_string(self.db.get(self.db_key, txn=txn, flags=flags))
+        return self.fromStorable(self.db.get(self.db_key, txn=txn, flags=flags))
 
     def make(self, txn=None):
         """Make function for when object doesn't exist
@@ -301,14 +324,15 @@ class Resource(metaclass=DB):
 
     def put(self, value, txn=None):
         """Put method for resource, and its subclasses"""
+        print(self.db_key)
         if value is None:
             if self.db_key in self.db:
                 self.db.delete(self.db_key, txn=txn)
         else:
-            self.db.put(self.db_key, to_string(value), txn=txn)
+            self.db.put(self.db_key, self.toStorable(value), txn=txn)
 
     def __repr__(self):
-        return '%s("%s")' % (self.__class__.__name__, from_string(self.db_key))
+        return '%s("%s")' % (self.__class__.__name__, self.fromStorable(self.db_key))
 
     @classmethod
     def doBackup(cls, path, *args):
@@ -508,14 +532,6 @@ class PandasDf(Container):
     def fileToStorable(self, filePath):
         df = pd.read_csv(filePath, sep='\t')
         return df
-
-
-def to_string(a):
-    return pickle.dumps(a, 2)
-
-
-def from_string(a):
-    return pickle.loads(a)
 
 
 envOpened = False

@@ -221,7 +221,7 @@ def testPandasDf():
     assert(len(dfAfterRemove.index)) == 3
 
 
-def testWithMatch():
+def testWhichMatch():
     with pytest.raises(ValueError) as err:
         pandasTest.keysWhichMatch('a', 'b', 'c')
 
@@ -258,22 +258,21 @@ def testCursors():
 
     firstKey, firstValue = cursor.get(flags=bsddb3.db.DB_NEXT)
 
-    assert firstKey == '1'
+    assert firstKey == ('1',)
     assert firstValue == 1
 
     secondKey, secondValue = cursor.get(flags=bsddb3.db.DB_NEXT)
 
-    assert secondKey == '2'
+    assert secondKey == ('2',)
     assert secondValue == 2
 
     # Nothing left in db
     out = cursor.get(flags=bsddb3.db.DB_NEXT)
 
     assert out is None
-
     withKeyKey, withKeyValue = cursor.getWithKey(firstKey, flags=bsddb3.db.DB_SET)
 
-    assert withKeyKey == '1'
+    assert withKeyKey == ('1',)
     assert withKeyValue == 1
 
     cursor.close()
@@ -308,7 +307,12 @@ def testCursorzDuplicate():
 
             assert prevCurrent + 1 == current
 
+            prev.close()
+
             prev = cursor.dup()
+
+    if prev is not None:
+        prev.close()
 
     cursor.close()
     txn.commit()
@@ -322,7 +326,7 @@ def testCursorzzPut():
     current = cursor.next(flags=bsddb3.db.DB_RMW)
 
     while current is not None:
-        key, value = current
+        (key,), value = current
 
         print(key, value)
 
@@ -342,7 +346,8 @@ def testCursorzzPut():
 
     # check that the changes went into effect
     while current is not None:
-        key, value = current
+        # Key is a tuple of length one here, unpack it to a value
+        (key,), value = current
 
         assert int(key) == value + 0.5
 
@@ -361,7 +366,7 @@ def testCursorzzzPutLaterWithDup():
     current = cursor.next(flags=bsddb3.db.DB_RMW)
 
     while current is not None:
-        key, value = current
+        (key,), value = current
 
         if int(key) == toSelect:
             randomSelected = cursor.dup()
@@ -374,7 +379,7 @@ def testCursorzzzPutLaterWithDup():
 
     assert toUpdate is not None
 
-    key, value = toUpdate
+    (key,), value = toUpdate
 
     assert int(key) == toSelect
 
