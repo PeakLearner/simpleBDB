@@ -24,11 +24,11 @@ def open_dbs():
         dbToOpen.setDB()
 
 
-def getEnvTxn():
+def getEnvTxn(parent=None, flags=0):
     if env is None:
         raise EnvNotCreatedException
     else:
-        return env.txn_begin()
+        return env.txn_begin(parent=parent, flags=flags)
 
 
 class EnvNotCreatedException(Exception):
