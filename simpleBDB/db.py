@@ -105,13 +105,10 @@ class Cursor:
             return None
         else:
             key, value = returnVal
-            print(key)
             return self.parent.fromKeyStore(key), self.parent.fromStorable(value)
 
     def getWithKey(self, key, flags=db.DB_SET):
-        print(key)
         key = self.parent.toKeyStore(key)
-        print(key)
         out = self.cursor.get(key, flags=flags)
         if out is None:
             return None
@@ -167,9 +164,10 @@ class Resource(metaclass=DB):
         """Checks that each key doesn't contain a space, then creates a tuple of the keys as str's"""
         output = []
         for entry in key:
+            entry = str(entry)
             if ' ' in entry:
                 raise ValueError("values should have no spaces", key)
-            output.append(str(entry))
+            output.append(entry)
 
         return tuple(output)
 
@@ -284,7 +282,6 @@ class Resource(metaclass=DB):
                     ", ".join(self.fromKeyStore(self.keys)),
                 ))
         self.values = self.keyToEntryTuple(args)
-        print(self.values)
         self.info = dict(zip(self.keys, self.values))
         self.set_db_key()
 
@@ -324,7 +321,6 @@ class Resource(metaclass=DB):
 
     def put(self, value, txn=None):
         """Put method for resource, and its subclasses"""
-        print(self.db_key)
         if value is None:
             if self.db_key in self.db:
                 self.db.delete(self.db_key, txn=txn)
