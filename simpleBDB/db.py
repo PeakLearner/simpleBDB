@@ -59,7 +59,6 @@ class DB(type):
         cls.db = db.DB(env)
         cls.db.open(cls.filename, None, cls.DBTYPE,
                     db.DB_AUTO_COMMIT |
-                    db.DB_THREAD |
                     db.DB_CREATE)
 
     def close(cls):
