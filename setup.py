@@ -12,7 +12,7 @@ setuptools.setup(
     long_description=long_description,
     long_description_content_type="text/markdown",
     url="https://github.com/deltarod/simpleBDB/",
-    install_requires=['bsddb3', 'pandas>=1.1.4'],
+    install_requires=['berkeleydb', 'pandas>=1.1.4'],
     packages=['simpleBDB'],
     extras_require={
         'test': ['pytest']
