@@ -302,13 +302,13 @@ class Resource(metaclass=DB):
         if write:
             flags = db.DB_RMW
         try:
-            if not self.db.exists(self.db_key, txn=txn, flags=flags):
+            if not DeadlockWrap(self.db.exists, self.db_key, txn=txn, flags=flags):
                 return self.make()
         except AttributeError:
             txn.abort()
             raise DBNeverOpenedException
 
-        return self.fromStorable(self.db.get(self.db_key, txn=txn, flags=flags))
+        return self.fromStorable(DeadlockWrap(self.db.get, self.db_key, txn=txn, flags=flags))
 
     def make(self):
         """Make function for when object doesn't exist
@@ -323,7 +323,7 @@ class Resource(metaclass=DB):
     def put(self, value, txn=None):
         """Put method for resource, and its subclasses"""
         if value is None:
-            if self.db.exists(self.db_key, txn=txn, flags=db.DB_RMW):
+            if DeadlockWrap(self.db.exists, self.db_key, txn=txn, flags=db.DB_RMW):
                 self.db.delete(self.db_key, txn=txn)
         else:
             DeadlockWrap(self.db.put, self.db_key, self.toStorable(value), txn=txn)
