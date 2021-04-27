@@ -542,9 +542,9 @@ def createEnvWithDir(envPath):
     if not os.path.exists(envPath):
         os.makedirs(envPath)
 
-    env.set_timeout(100000, flags=db.DB_SET_TXN_TIMEOUT)
-    env.set_timeout(100000, flags=db.DB_SET_LOCK_TIMEOUT)
-    env.set_timeout(100000, flags=db.DB_SET_REG_TIMEOUT)
+    env.set_timeout(500000, flags=db.DB_SET_TXN_TIMEOUT)
+    env.set_timeout(500000, flags=db.DB_SET_LOCK_TIMEOUT)
+    env.set_timeout(500000, flags=db.DB_SET_REG_TIMEOUT)
     env.open(
         envPath,
         db.DB_INIT_MPOOL |
