@@ -3,9 +3,8 @@ import pickle
 import os
 import pandas as pd
 # third party module not by me:
-import bsddb3.db as db
-
-# For more info on bsddb3 see here: http://pybsddb.sourceforge.net/bsddb3.html
+import berkeleydb.db as db
+from berkeleydb.dbutils import DeadlockWrap
 
 DBS = []
 env = db.DBEnv()
@@ -116,7 +115,10 @@ class Cursor:
             return self.parent.fromKeyStore(key), self.parent.fromStorable(value)
 
     def put(self, key, value, flags=db.DB_CURRENT):
-        self.cursor.put(self.parent.toKeyStore(key), self.parent.toStorable(value), flags=flags)
+        # Set DB
+        key = self.parent.toKeyStore(key)
+        self.cursor.set(key)
+        self.cursor.put(key, self.parent.toStorable(value), flags=flags)
 
     def next(self, flags=0):
         output = self.cursor.next(flags=flags)
@@ -145,7 +147,7 @@ class Cursor:
 
 
 class Resource(metaclass=DB):
-    """Base class for bsddb3 files"""
+    """Base class for berkeleydb files"""
     DBTYPE = db.DB_BTREE
 
     @classmethod
@@ -296,18 +298,19 @@ class Resource(metaclass=DB):
 
     def get(self, txn=None, write=False):
         """Get method for resource, and its subclasses"""
-        try:
-            if self.db_key not in self.db:
-                return self.make(txn)
-        except AttributeError:
-            txn.abort()
-            raise DBNeverOpenedException
         flags = 0
         if write:
             flags = db.DB_RMW
+        try:
+            if not self.db.exists(self.db_key, txn=txn, flags=flags):
+                return self.make()
+        except AttributeError:
+            txn.abort()
+            raise DBNeverOpenedException
+
         return self.fromStorable(self.db.get(self.db_key, txn=txn, flags=flags))
 
-    def make(self, txn=None):
+    def make(self):
         """Make function for when object doesn't exist
 
         Override functionality by adding a make_details function to your subclass"""
@@ -315,16 +318,15 @@ class Resource(metaclass=DB):
             made = self.make_details()
         except AttributeError:
             return None
-        self.put(made, txn)
         return made
 
     def put(self, value, txn=None):
         """Put method for resource, and its subclasses"""
         if value is None:
-            if self.db_key in self.db:
+            if self.db.exists(self.db_key, txn=txn, flags=db.DB_RMW):
                 self.db.delete(self.db_key, txn=txn)
         else:
-            self.db.put(self.db_key, self.toStorable(value), txn=txn)
+            DeadlockWrap(self.db.put, self.db_key, self.toStorable(value), txn=txn)
 
     def __repr__(self):
         return '%s("%s")' % (self.__class__.__name__, self.fromStorable(self.db_key))
@@ -540,6 +542,9 @@ def createEnvWithDir(envPath):
     if not os.path.exists(envPath):
         os.makedirs(envPath)
 
+    env.set_timeout(100000, flags=db.DB_SET_TXN_TIMEOUT)
+    env.set_timeout(100000, flags=db.DB_SET_LOCK_TIMEOUT)
+    env.set_timeout(100000, flags=db.DB_SET_REG_TIMEOUT)
     env.open(
         envPath,
         db.DB_INIT_MPOOL |

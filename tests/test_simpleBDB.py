@@ -1,9 +1,12 @@
+import threading
+import time
+
 import simpleBDB as db
 import os
 import shutil
 import pandas as pd
 import pytest
-import bsddb3
+import berkeleydb
 import random
 
 testDir = 'testDb'
@@ -54,10 +57,12 @@ def test_resource_put_next():
 
 
 def test_resource_delete():
+    txn = db.getEnvTxn()
     nextTest = ResourceToTest("a", "c")
-    nextTest.put(None)
+    nextTest.put(None, txn=txn)
+    txn.commit()
 
-    assert len(nextTest.all()) == 1
+    assert len(ResourceToTest.all()) == 1
 
 
 def test_resource_make_no_make_details():
@@ -256,21 +261,21 @@ def testCursors():
 
     cursor = CursorTest.getCursor(txn=txn, bulk=True)
 
-    firstKey, firstValue = cursor.get(flags=bsddb3.db.DB_NEXT)
+    firstKey, firstValue = cursor.get(flags=berkeleydb.db.DB_NEXT)
 
     assert firstKey == ('1',)
     assert firstValue == 1
 
-    secondKey, secondValue = cursor.get(flags=bsddb3.db.DB_NEXT)
+    secondKey, secondValue = cursor.get(flags=berkeleydb.db.DB_NEXT)
 
     assert secondKey == ('2',)
     assert secondValue == 2
 
     # Nothing left in db
-    out = cursor.get(flags=bsddb3.db.DB_NEXT)
+    out = cursor.get(flags=berkeleydb.db.DB_NEXT)
 
     assert out is None
-    withKeyKey, withKeyValue = cursor.getWithKey(firstKey, flags=bsddb3.db.DB_SET)
+    withKeyKey, withKeyValue = cursor.getWithKey(firstKey, flags=berkeleydb.db.DB_SET)
 
     assert withKeyKey == ('1',)
     assert withKeyValue == 1
@@ -323,7 +328,7 @@ def testCursorzzPut():
     txn = db.getEnvTxn()
     cursor = CursorTest.getCursor(txn=txn, bulk=True)
 
-    current = cursor.next(flags=bsddb3.db.DB_RMW)
+    current = cursor.next(flags=berkeleydb.db.DB_RMW)
 
     while current is not None:
         (key,), value = current
@@ -334,7 +339,7 @@ def testCursorzzPut():
 
         cursor.put(key, toPut)
 
-        current = cursor.next(flags=bsddb3.db.DB_RMW)
+        current = cursor.next(flags=berkeleydb.db.DB_RMW)
 
     cursor.close()
     txn.commit()
@@ -342,7 +347,7 @@ def testCursorzzPut():
     txn = db.getEnvTxn()
     cursor = CursorTest.getCursor(txn=txn, bulk=True)
 
-    current = cursor.next(flags=bsddb3.db.DB_RMW)
+    current = cursor.next(flags=berkeleydb.db.DB_RMW)
 
     # check that the changes went into effect
     while current is not None:
@@ -351,7 +356,7 @@ def testCursorzzPut():
 
         assert int(key) == value + 0.5
 
-        current = cursor.next(flags=bsddb3.db.DB_RMW)
+        current = cursor.next(flags=berkeleydb.db.DB_RMW)
 
     cursor.close()
     txn.commit()
@@ -363,7 +368,7 @@ def testCursorzzzPutLaterWithDup():
     cursor = CursorTest.getCursor(txn=txn, bulk=True)
     randomSelected = None
 
-    current = cursor.next(flags=bsddb3.db.DB_RMW)
+    current = cursor.next(flags=berkeleydb.db.DB_RMW)
 
     while current is not None:
         (key,), value = current
@@ -371,7 +376,7 @@ def testCursorzzzPutLaterWithDup():
         if int(key) == toSelect:
             randomSelected = cursor.dup()
 
-        current = cursor.next(flags=bsddb3.db.DB_RMW)
+        current = cursor.next(flags=berkeleydb.db.DB_RMW)
 
     cursor.close()
 
@@ -393,6 +398,40 @@ def testCursorzzzPutLaterWithDup():
     toCheck = CursorTest(str(toSelect)).get()
 
     assert value == toCheck
+
+
+runDeadlock = True
+
+
+def deadlockDetector():
+    while runDeadlock:
+        print('lock')
+        db.env.lock_detect(berkeleydb.db.DB_LOCK_DEFAULT)
+        time.sleep(1)
+
+
+def test_detect_deadlock():
+    global runDeadlock
+    firstTxn = db.getEnvTxn()
+    secondTxn = db.getEnvTxn()
+
+    thread = threading.Thread(target=deadlockDetector)
+    thread.start()
+
+    # Block using a write
+    first = CursorTest('1').get(txn=firstTxn, write=True)
+
+    # This should error due to deadlock
+    with pytest.raises(berkeleydb.db.DBLockDeadlockError):
+        second = CursorTest('1').get(txn=secondTxn, write=True)
+
+    firstTxn.commit()
+    secondTxn.commit()
+
+    runDeadlock = False
+    thread.join()
+
+
 
 
 db.open_dbs()
