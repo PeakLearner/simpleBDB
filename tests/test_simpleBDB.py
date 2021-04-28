@@ -433,7 +433,6 @@ def test_detect_deadlock():
 
 
 
-
 db.open_dbs()
 
 

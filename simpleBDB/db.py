@@ -172,7 +172,6 @@ class Resource(metaclass=DB):
 
         return tuple(output)
 
-
     @classmethod
     def fromStorable(cls, storable):
         """Takes the output from the DB and converts it to the way it should be"""
@@ -326,7 +325,7 @@ class Resource(metaclass=DB):
             if self.db.exists(self.db_key, txn=txn, flags=db.DB_RMW):
                 self.db.delete(self.db_key, txn=txn)
         else:
-            DeadlockWrap(self.db.put, self.db_key, self.toStorable(value), txn=txn)
+            self.db.put(self.db_key, self.toStorable(value), txn=txn)
 
     def __repr__(self):
         return '%s("%s")' % (self.__class__.__name__, self.fromStorable(self.db_key))
