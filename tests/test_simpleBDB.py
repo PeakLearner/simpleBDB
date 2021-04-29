@@ -439,7 +439,7 @@ hasErrored = False
 
 def test_error_restart():
 
-    @db.abortOnError
+    @db.txnAbortOnError
     def wrapped(txn=None):
         global hasErrored
 
