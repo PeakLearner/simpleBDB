@@ -10,6 +10,14 @@ DBS = []
 env = db.DBEnv()
 
 
+def retry(func):
+    """Wrapper function to retry database operations"""
+    def wrap(*args, **kwargs):
+        return DeadlockWrap(func, *args, **kwargs, max_retries=20)
+
+    return wrap
+
+
 # this prevents lockers/locks from accumulating when python is closed
 # normally, but does not prevent this when we C-c out of the server.
 def close_dbs():
@@ -288,6 +296,7 @@ class Resource(metaclass=DB):
     def set_db_key(self):
         self.db_key = self.toKeyStore(self.values)
 
+    @retry
     def alter(self, fun, txn=None):
         """Apply fun to current value and then save it."""
         before = self.get(txn=txn, write=True)
@@ -295,6 +304,7 @@ class Resource(metaclass=DB):
         self.put(after, txn=txn)
         return after
 
+    @retry
     def get(self, txn=None, write=False):
         """Get method for resource, and its subclasses"""
         flags = 0
@@ -319,6 +329,7 @@ class Resource(metaclass=DB):
             return None
         return made
 
+    @retry
     def put(self, value, txn=None):
         """Put method for resource, and its subclasses"""
         if value is None:
