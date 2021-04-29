@@ -13,7 +13,26 @@ env = db.DBEnv()
 def retry(func):
     """Wrapper function to retry database operations"""
     def wrap(*args, **kwargs):
-        return DeadlockWrap(func, *args, **kwargs, max_retries=20)
+        return DeadlockWrap(func, *args, **kwargs, max_retries=10)
+
+    return wrap
+
+
+def txnAbortOnError(func):
+    """Wrapper function to provide, and abort a txn when an error occurs"""
+    def wrap(*args, **kwargs):
+        txn = getEnvTxn()
+        try:
+            out = func(*args, **kwargs, txn=txn)
+            txn.commit()
+            return out
+        except AbortTXNException:
+            txn.abort()
+            return
+        except:
+            print('aborting txn')
+            txn.abort()
+            raise
 
     return wrap
 
@@ -43,6 +62,10 @@ class EnvNotCreatedException(Exception):
 
 
 class DBNeverOpenedException(Exception):
+    pass
+
+
+class AbortTXNException(Exception):
     pass
 
 
@@ -552,9 +575,9 @@ def createEnvWithDir(envPath):
     if not os.path.exists(envPath):
         os.makedirs(envPath)
 
-    env.set_timeout(100000, flags=db.DB_SET_TXN_TIMEOUT)
-    env.set_timeout(100000, flags=db.DB_SET_LOCK_TIMEOUT)
-    env.set_timeout(100000, flags=db.DB_SET_REG_TIMEOUT)
+    env.set_timeout(200000, flags=db.DB_SET_TXN_TIMEOUT)
+    env.set_timeout(250000, flags=db.DB_SET_LOCK_TIMEOUT)
+    env.set_timeout(300000, flags=db.DB_SET_REG_TIMEOUT)
     env.open(
         envPath,
         db.DB_INIT_MPOOL |

@@ -16,6 +16,8 @@ if os.path.exists('testDb'):
 
 db.createEnvWithDir(testDir)
 
+time.sleep(1)
+
 
 def test_envCreate():
     assert os.path.exists(testDir)
@@ -432,9 +434,28 @@ def test_detect_deadlock():
     thread.join()
 
 
+hasErrored = False
+
+
+def test_error_restart():
+
+    @db.abortOnError
+    def wrapped(txn=None):
+        global hasErrored
+
+        CursorTest('1').get(txn=txn, write=True)
+
+        if not hasErrored:
+            hasErrored = True
+            raise Exception
+
+    with pytest.raises(Exception):
+        wrapped()
+
+    # Check that the write lock was aborted due to the wrapper
+    otherTxn = db.getEnvTxn()
+    CursorTest('1').get(txn=otherTxn, write=True)
+    otherTxn.commit()
+
 
 db.open_dbs()
-
-
-
-
