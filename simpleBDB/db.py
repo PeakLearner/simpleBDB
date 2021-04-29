@@ -301,13 +301,13 @@ class Resource(metaclass=DB):
         if write:
             flags = db.DB_RMW
         try:
-            if not DeadlockWrap(self.db.exists, self.db_key, txn=txn, flags=flags):
+            if not self.db.exists(self.db_key, txn=txn, flags=flags):
                 return self.make()
         except AttributeError:
             txn.abort()
             raise DBNeverOpenedException
 
-        return self.fromStorable(DeadlockWrap(self.db.get, self.db_key, txn=txn, flags=flags))
+        return self.fromStorable(self.db.get(self.db_key, txn=txn, flags=flags))
 
     def make(self):
         """Make function for when object doesn't exist
@@ -322,7 +322,7 @@ class Resource(metaclass=DB):
     def put(self, value, txn=None):
         """Put method for resource, and its subclasses"""
         if value is None:
-            if DeadlockWrap(self.db.exists, self.db_key, txn=txn, flags=db.DB_RMW):
+            if self.db.exists(self.db_key, txn=txn, flags=db.DB_RMW):
                 self.db.delete(self.db_key, txn=txn)
         else:
             self.db.put(self.db_key, self.toStorable(value), txn=txn)
@@ -541,9 +541,9 @@ def createEnvWithDir(envPath):
     if not os.path.exists(envPath):
         os.makedirs(envPath)
 
-    env.set_timeout(500000, flags=db.DB_SET_TXN_TIMEOUT)
-    env.set_timeout(500000, flags=db.DB_SET_LOCK_TIMEOUT)
-    env.set_timeout(500000, flags=db.DB_SET_REG_TIMEOUT)
+    env.set_timeout(100000, flags=db.DB_SET_TXN_TIMEOUT)
+    env.set_timeout(100000, flags=db.DB_SET_LOCK_TIMEOUT)
+    env.set_timeout(100000, flags=db.DB_SET_REG_TIMEOUT)
     env.open(
         envPath,
         db.DB_INIT_MPOOL |
