@@ -319,7 +319,6 @@ class Resource(metaclass=DB):
     def set_db_key(self):
         self.db_key = self.toKeyStore(self.values)
 
-    @retry
     def alter(self, fun, txn=None):
         """Apply fun to current value and then save it."""
         before = self.get(txn=txn, write=True)
@@ -327,7 +326,6 @@ class Resource(metaclass=DB):
         self.put(after, txn=txn)
         return after
 
-    @retry
     def get(self, txn=None, write=False):
         """Get method for resource, and its subclasses"""
         flags = 0
@@ -352,7 +350,6 @@ class Resource(metaclass=DB):
             return None
         return made
 
-    @retry
     def put(self, value, txn=None):
         """Put method for resource, and its subclasses"""
         if value is None:
