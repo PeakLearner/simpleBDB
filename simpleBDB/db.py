@@ -1,10 +1,13 @@
 import json
 import pickle
 import os
+import logging
 import pandas as pd
 # third party module not by me:
 import berkeleydb.db as db
 from berkeleydb.dbutils import DeadlockWrap
+
+logger = logging.getLogger(__name__)
 
 DBS = []
 env = db.DBEnv()
@@ -30,7 +33,7 @@ def txnAbortOnError(func):
             txn.abort()
             return
         except:
-            print('aborting txn')
+            logging.exception('error occured in func')
             txn.abort()
             raise
 
@@ -331,14 +334,13 @@ class Resource(metaclass=DB):
         flags = 0
         if write:
             flags = db.DB_RMW
-        try:
-            if not self.db.exists(self.db_key, txn=txn, flags=flags):
-                return self.make()
-        except AttributeError:
-            txn.abort()
-            raise DBNeverOpenedException
 
-        return self.fromStorable(self.db.get(self.db_key, txn=txn, flags=flags))
+        out = self.db.get(self.db_key, txn=txn, flags=flags)
+
+        if out is None:
+            return self.make()
+
+        return self.fromStorable(out)
 
     def make(self):
         """Make function for when object doesn't exist
@@ -353,8 +355,7 @@ class Resource(metaclass=DB):
     def put(self, value, txn=None):
         """Put method for resource, and its subclasses"""
         if value is None:
-            if self.db.exists(self.db_key, txn=txn, flags=db.DB_RMW):
-                self.db.delete(self.db_key, txn=txn)
+            self.db.delete(self.db_key, txn=txn)
         else:
             self.db.put(self.db_key, self.toStorable(value), txn=txn)
 
@@ -466,6 +467,16 @@ class Container(Resource):
         after = self.alter(self.remove_item, txn=txn)
         return self.removed, after
 
+    def addNoDB(self, item, resource):
+        self.item = item
+
+        return self.item, self.add_item(resource)
+
+    def removeNoDB(self, item, resource):
+        self.item = item
+
+        return self.item, self.remove_item(resource)
+
 
 class PandasDf(Container):
     """Adds support for using Pandas Data Frames, as well as different ways to add items"""
@@ -572,9 +583,9 @@ def createEnvWithDir(envPath):
     if not os.path.exists(envPath):
         os.makedirs(envPath)
 
-    env.set_timeout(200000, flags=db.DB_SET_TXN_TIMEOUT)
-    env.set_timeout(250000, flags=db.DB_SET_LOCK_TIMEOUT)
-    env.set_timeout(300000, flags=db.DB_SET_REG_TIMEOUT)
+    env.set_timeout(5000000, flags=db.DB_SET_TXN_TIMEOUT)
+    env.set_timeout(10000000, flags=db.DB_SET_LOCK_TIMEOUT)
+    env.set_timeout(15000000, flags=db.DB_SET_REG_TIMEOUT)
     env.open(
         envPath,
         db.DB_INIT_MPOOL |
