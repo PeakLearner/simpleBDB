@@ -586,6 +586,7 @@ def createEnvWithDir(envPath):
     env.set_timeout(5000000, flags=db.DB_SET_TXN_TIMEOUT)
     env.set_timeout(10000000, flags=db.DB_SET_LOCK_TIMEOUT)
     env.set_timeout(15000000, flags=db.DB_SET_REG_TIMEOUT)
+    env.set_cachesize(1, 0)
     env.open(
         envPath,
         db.DB_INIT_MPOOL |
