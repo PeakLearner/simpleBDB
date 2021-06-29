@@ -162,6 +162,14 @@ class Cursor:
 
         return self.parent.fromKeyStore(key), self.parent.fromStorable(value)
 
+    def first(self, flags=0):
+        output = self.cursor.first(flags=flags)
+        if output is None:
+            return None
+        key, value = output
+
+        return self.parent.fromKeyStore(key), self.parent.fromStorable(value)
+
     def dup(self, flags=db.DB_POSITION):
         return Cursor(self.cursor.dup(flags), self.parent)
 
@@ -217,15 +225,25 @@ class Resource(metaclass=DB):
 
     @classmethod
     def length(cls):
-        return len(cls.db.keys())
+        try:
+            keys = cls.db.keys()
+            return len(keys)
+        except AttributeError:
+            return 0
 
     @classmethod
     def all(cls, txn=None):
-        return [cls(*tup).get(txn=txn) for tup in cls.db_key_tuples()]
+        tuples = cls.db_key_tuples()
+        return [cls(*tup).get(txn=txn) for tup in tuples]
 
     @classmethod
     def db_keys(cls):
-        return [pickle.loads(k) for k in cls.db.keys()]
+        try:
+            dbKeys = cls.db.keys()
+        except AttributeError:
+            return []
+
+        return [cls.fromKeyStore(k) for k in dbKeys]
 
     @classmethod
     def db_key_tuples(cls):
