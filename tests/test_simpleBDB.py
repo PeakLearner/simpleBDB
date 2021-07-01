@@ -14,9 +14,8 @@ testDir = 'testDb'
 if os.path.exists('testDb'):
     shutil.rmtree('testDb')
 
+db.open_env()
 db.createEnvWithDir(testDir)
-
-time.sleep(1)
 
 
 def test_envCreate():
@@ -335,8 +334,6 @@ def testCursorzzPut():
     while current is not None:
         (key,), value = current
 
-        print(key, value)
-
         toPut = value - 0.5
 
         cursor.put(key, toPut)
@@ -407,8 +404,7 @@ runDeadlock = True
 
 def deadlockDetector():
     while runDeadlock:
-        print('lock')
-        db.env.lock_detect(berkeleydb.db.DB_LOCK_DEFAULT)
+        db.lockDetect()
         time.sleep(1)
 
 

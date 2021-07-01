@@ -10,7 +10,6 @@ from berkeleydb.dbutils import DeadlockWrap
 logger = logging.getLogger(__name__)
 
 DBS = []
-env = db.DBEnv()
 
 
 def retry(func):
@@ -51,6 +50,19 @@ def close_dbs():
 def open_dbs():
     for dbToOpen in DBS:
         dbToOpen.setDB()
+
+
+def close_env():
+    env.close()
+
+
+def open_env():
+    global env
+    env = db.DBEnv()
+
+
+def lockDetect(flags=db.DB_LOCK_DEFAULT):
+    env.lock_detect(flags)
 
 
 def getEnvTxn(parent=None, flags=0):
