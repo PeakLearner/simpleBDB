@@ -188,6 +188,9 @@ class Cursor:
     def close(self):
         return self.cursor.close()
 
+    def delete(self):
+        self.cursor.delete()
+
     def current(self, flags=0):
         output = self.cursor.current(flags=flags)
         if output is None:
@@ -335,8 +338,8 @@ class Resource(metaclass=DB):
                 entry.db_key))
 
     @classmethod
-    def has_key(cls, k):
-        return cls.toKeyStore(k) in cls.db
+    def has_key(cls, k, txn=None):
+        return cls.db.exists(cls.toKeyStore(k), txn=txn)
 
     def __init__(self, *args):
         if len(args) != len(self.keys):
