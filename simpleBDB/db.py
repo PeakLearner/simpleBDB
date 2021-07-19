@@ -144,7 +144,11 @@ class Cursor:
         self.parent = parent
 
     def get(self, flags=0):
-        returnVal = self.cursor.get(flags=flags)
+        try:
+            returnVal = self.cursor.get(flags=flags)
+        except db.DBLockDeadlockError:
+            self.cursor.close()
+            raise
         if returnVal is None:
             return None
         else:
@@ -153,7 +157,11 @@ class Cursor:
 
     def getWithKey(self, key, flags=db.DB_SET):
         key = self.parent.toKeyStore(key)
-        out = self.cursor.get(key, flags=flags)
+        try:
+            out = self.cursor.get(key, flags=flags)
+        except db.DBLockDeadlockError:
+            self.cursor.close()
+            raise
         if out is None:
             return None
         else:
@@ -163,11 +171,19 @@ class Cursor:
     def put(self, key, value, flags=db.DB_CURRENT):
         # Set DB
         key = self.parent.toKeyStore(key)
-        self.cursor.set(key)
-        self.cursor.put(key, self.parent.toStorable(value), flags=flags)
+        try:
+            self.cursor.set(key)
+            self.cursor.put(key, self.parent.toStorable(value), flags=flags)
+        except db.DBLockDeadlockError:
+            self.cursor.close()
+            raise
 
     def next(self, flags=0):
-        output = self.cursor.next(flags=flags)
+        try:
+            output = self.cursor.next(flags=flags)
+        except db.DBLockDeadlockError:
+            self.cursor.close()
+            raise
         if output is None:
             return None
         key, value = output
@@ -175,7 +191,11 @@ class Cursor:
         return self.parent.fromKeyStore(key), self.parent.fromStorable(value)
 
     def first(self, flags=0):
-        output = self.cursor.first(flags=flags)
+        try:
+            output = self.cursor.first(flags=flags)
+        except db.DBLockDeadlockError:
+            self.cursor.close()
+            raise
         if output is None:
             return None
         key, value = output
@@ -183,7 +203,11 @@ class Cursor:
         return self.parent.fromKeyStore(key), self.parent.fromStorable(value)
 
     def dup(self, flags=db.DB_POSITION):
-        return Cursor(self.cursor.dup(flags), self.parent)
+        try:
+            return Cursor(self.cursor.dup(flags), self.parent)
+        except db.DBLockDeadlockError:
+            self.cursor.close()
+            raise
 
     def close(self):
         return self.cursor.close()
@@ -192,7 +216,11 @@ class Cursor:
         self.cursor.delete()
 
     def current(self, flags=0):
-        output = self.cursor.current(flags=flags)
+        try:
+            output = self.cursor.current(flags=flags)
+        except db.DBLockDeadlockError:
+            self.cursor.close()
+            raise
         if output is None:
             return None
         key, value = output
