@@ -63,6 +63,11 @@ def open_env():
 
 def lockDetect(flags=db.DB_LOCK_DEFAULT):
     env.lock_detect(flags)
+    
+    
+def getLogArchive(flags=0):
+    """Returns all log files which are no longer needed"""
+    return env.log_archive(flags)
 
 
 def getEnvTxn(parent=None, flags=0):
