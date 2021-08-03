@@ -63,6 +63,10 @@ def open_env():
 
 def lockDetect(flags=db.DB_LOCK_DEFAULT):
     env.lock_detect(flags)
+
+
+def setLockDetect(flags=db.DB_LOCK_DEFAULT):
+    env.set_lk_detect(flags)
     
     
 def getLogArchive(flags=0):
