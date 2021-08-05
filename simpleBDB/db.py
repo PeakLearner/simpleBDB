@@ -11,6 +11,8 @@ logger = logging.getLogger(__name__)
 
 DBS = []
 
+env = None
+
 
 def retry(func):
     """Wrapper function to retry database operations"""
