@@ -17,7 +17,7 @@ env = None
 def retry(func):
     """Wrapper function to retry database operations"""
     def wrap(*args, **kwargs):
-        return DeadlockWrap(func, *args, **kwargs, max_retries=10)
+        return DeadlockWrap(func, *args, **kwargs, max_retries=50)
 
     return wrap
 
