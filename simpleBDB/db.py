@@ -291,6 +291,11 @@ class Resource(metaclass=DB):
         return [cls(*tup).get(txn=txn) for tup in tuples]
 
     @classmethod
+    def all_dict(cls, txn=None):
+        tuples = cls.db_key_tuples()
+        return {tup: cls(*tup).get(txn=txn) for tup in tuples}
+
+    @classmethod
     def db_keys(cls):
         try:
             dbKeys = cls.db.keys()
@@ -666,4 +671,5 @@ def createEnvWithDir(envPath):
         db.DB_INIT_LOCK |
         db.DB_INIT_TXN |
         db.DB_INIT_LOG |
-        db.DB_CREATE)
+        db.DB_CREATE |
+        db.DB_RECOVER)
