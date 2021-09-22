@@ -455,3 +455,9 @@ def test_error_restart():
 
 
 db.open_dbs()
+
+
+def test_backup():
+    db.doBackup('backup')
+
+    assert os.path.exists('backup')
