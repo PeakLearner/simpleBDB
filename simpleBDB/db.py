@@ -386,8 +386,12 @@ class Resource(metaclass=DB):
                 entry.db_key))
 
     @classmethod
-    def has_key(cls, k, txn=None):
-        return cls.db.exists(cls.toKeyStore(k), txn=txn)
+    def has_key(cls, k, txn=None, write=False):
+        flags = 0
+        if write:
+            flags = db.DB_RMW
+
+        return cls.db.exists(cls.toKeyStore(k), txn=txn, flags=flags)
 
     def __init__(self, *args):
         if len(args) != len(self.keys):
