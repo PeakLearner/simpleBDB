@@ -566,7 +566,8 @@ def createEnvWithDir(envPath):
     env.set_timeout(10000000, flags=db.DB_SET_LOCK_TIMEOUT)
     env.set_timeout(15000000, flags=db.DB_SET_REG_TIMEOUT)
     env.set_cachesize(1, 0)
-    env.set_lk_max_locks(10000)
+    env.set_lk_max_locks(100000)
+    env.set_lk_max_objects(100000)
 
     env.open(
         envPath,
