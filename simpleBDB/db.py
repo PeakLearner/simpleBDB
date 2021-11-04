@@ -16,6 +16,7 @@ env = None
 
 def retry(func):
     """Wrapper function to retry database operations"""
+
     def wrap(*args, **kwargs):
         return DeadlockWrap(func, *args, **kwargs, max_retries=50)
 
@@ -24,6 +25,7 @@ def retry(func):
 
 def txnAbortOnError(func):
     """Wrapper function to provide, and abort a txn when an error occurs"""
+
     def wrap(*args, **kwargs):
         txn = getEnvTxn()
         try:
@@ -73,8 +75,8 @@ def setLockDetect(flags=db.DB_LOCK_DEFAULT):
 
 def doBackup(target, flags=db.DB_CREATE):
     env.backup(target, flags=flags)
-    
-    
+
+
 def getLogArchive(flags=0):
     """Returns all log files which are no longer needed"""
     return env.log_archive(flags)
@@ -558,7 +560,7 @@ class PandasDf(Container):
 envOpened = False
 
 
-def createEnvWithDir(envPath):
+def createEnvWithDir(envPath, recover=False):
     """creates the DBEnv using envPath, Must be called before using the DB
 
     envPath: The directory where the db will be stored"""
@@ -573,12 +575,11 @@ def createEnvWithDir(envPath):
     env.set_lk_max_locks(100000)
     env.set_lk_max_objects(100000)
 
+    if recover:
+        key = db.DB_INIT_MPOOL | db.DB_THREAD | db.DB_INIT_LOCK | db.DB_INIT_TXN | db.DB_INIT_LOG | db.DB_CREATE | db.DB_JOINENV | db.DB_RECOVER
+    else:
+        key = db.DB_INIT_MPOOL | db.DB_THREAD | db.DB_INIT_LOCK | db.DB_INIT_TXN | db.DB_INIT_LOG | db.DB_CREATE | db.DB_JOINENV
+
     env.open(
         envPath,
-        db.DB_INIT_MPOOL |
-        db.DB_THREAD |
-        db.DB_INIT_LOCK |
-        db.DB_INIT_TXN |
-        db.DB_INIT_LOG |
-        db.DB_CREATE |
-        db.DB_RECOVER)
+        key)
